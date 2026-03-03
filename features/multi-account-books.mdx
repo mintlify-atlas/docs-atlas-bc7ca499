@@ -1,0 +1,365 @@
+---
+title: Multi-Account Books
+description: Manage different financial accounts and budgets with EasyACT's account book system
+---
+
+## Overview
+
+EasyACT's account book system allows you to organize your finances by maintaining separate transaction records. Each account book can represent different purposes such as personal expenses, business transactions, or specific projects.
+
+## Account Book Architecture
+
+The application uses a centralized store to manage all account books:
+
+<CardGroup cols={2}>
+  <Card title="Centralized Storage" icon="database">
+    All account books are stored in a Pinia store for reactive state management across the entire application.
+  </Card>
+  
+  <Card title="Real-time Sync" icon="arrows-rotate">
+    Changes to account books immediately reflect across all views and components.
+  </Card>
+  
+  <Card title="Automatic Sorting" icon="arrow-down-wide-short">
+    Transactions are automatically sorted by date in descending order (newest first).
+  </Card>
+  
+  <Card title="Persistent Data" icon="hard-drive">
+    All account data is stored in PostgreSQL database for reliability and durability.
+  </Card>
+</CardGroup>
+
+## Account Store Structure
+
+The account store manages the application state:
+
+```javascript
+const state = {
+  accountBooks: [],      // Array of all transactions
+  isLoading: true,       // Loading state for UI feedback
+  error: null            // Error messages for user display
+}
+```
+
+### State Properties
+
+- **accountBooks**: Contains all transaction records with full details
+- **isLoading**: Tracks data fetching status for skeleton screens
+- **error**: Stores error messages when API calls fail
+
+## Filtering and Querying
+
+The store provides powerful getters for data access:
+
+### Income-Only Filter
+
+```javascript
+incomeOnly: (state) => {
+  return state.accountBooks.filter(
+    (book) => book.actionId === 'Income'
+  )
+}
+```
+
+Returns all transactions marked as income, useful for revenue analysis.
+
+### Expenses-Only Filter
+
+```javascript
+expensesOnly: (state) => {
+  return state.accountBooks.filter(
+    (book) => book.actionId === 'Expenses'
+  )
+}
+```
+
+Returns all expense transactions for spending analysis.
+
+### Total Amount Calculation
+
+```javascript
+totalAmount: (state) => {
+  return state.accountBooks.reduce(
+    (sum, item) => sum + item.amount, 0
+  )
+}
+```
+
+Calculates the sum of all transactions regardless of type.
+
+### Monthly Records Filter
+
+The most powerful filtering capability:
+
+```javascript
+getRecordsByMonth: (state) => {
+  return (yearMonthString) => {
+    if (!yearMonthString) return state.accountBooks
+    return state.accountBooks.filter((book) => {
+      return book.date && book.date.startsWith(yearMonthString)
+    })
+  }
+}
+```
+
+**Usage Example:**
+
+```javascript
+// Get all transactions from March 2026
+const marchRecords = store.getRecordsByMonth('2026-03')
+
+// Get all transactions from December 2025
+const decemberRecords = store.getRecordsByMonth('2025-12')
+```
+
+<Tip>
+  The month filter uses string matching on the date field, making it extremely efficient for large datasets.
+</Tip>
+
+## CRUD Operations
+
+Manage your account books with comprehensive create, read, update, and delete operations:
+
+### Create New Record
+
+<Steps>
+  <Step title="Prepare Data">
+    Create a transaction object with date, amount, description, actionId, and categoryId.
+  </Step>
+  
+  <Step title="Call API">
+    The store sends a POST request to `/api/account-books` endpoint.
+  </Step>
+  
+  <Step title="Handle Response">
+    Returns `true` on success or `false` with error message on failure.
+  </Step>
+  
+  <Step title="Update UI">
+    Success triggers a toast notification and refreshes the transaction list.
+  </Step>
+</Steps>
+
+**Code Example:**
+
+```javascript
+await store.addAccountBook({
+  date: '2026-03-03T14:30:00',
+  amount: 100,
+  description: '午餐',
+  actionId: 'Expenses',
+  categoryId: 'Food',
+})
+```
+
+### Read Account Books
+
+Fetch all transactions from the database:
+
+```javascript
+await store.fetchAccountBooks()
+```
+
+- Sets `isLoading` to `true` during fetch
+- Populates `accountBooks` array with response data
+- Sets `isLoading` to `false` when complete
+- Stores error messages in `error` property if request fails
+
+<Note>
+  The application automatically fetches account books when mounting chart and list views, and refreshes every 60 seconds.
+</Note>
+
+### Update Existing Record
+
+Modify transaction details:
+
+```javascript
+await store.updateAccountBook(recordId, {
+  date: '2026-03-03T15:00:00',
+  amount: 150,
+  description: '更新後的描述',
+  actionId: 'Expenses',
+  categoryId: 'Food',
+})
+```
+
+**Parameters:**
+- `recordId`: The unique identifier of the transaction to update
+- `record`: Object containing updated transaction data
+
+**Returns:** `true` on success, `false` on failure
+
+### Delete Records (Single or Batch)
+
+Remove one or multiple transactions:
+
+```javascript
+// Delete multiple records
+await store.deleteAccountBooks(['id1', 'id2', 'id3'])
+
+// Delete single record
+await store.deleteAccountBooks(['id1'])
+```
+
+**Batch Delete Process:**
+
+<Steps>
+  <Step title="Select Records">
+    User selects one or more transactions using checkboxes.
+  </Step>
+  
+  <Step title="Confirm Action">
+    Confirmation dialog displays the count of records to be deleted.
+  </Step>
+  
+  <Step title="Execute Deletion">
+    API receives array of IDs and performs batch deletion.
+  </Step>
+  
+  <Step title="Refresh Data">
+    On success, the transaction list refreshes to reflect changes.
+  </Step>
+</Steps>
+
+<Warning>
+  Batch deletion is permanent and cannot be undone. The confirmation dialog helps prevent accidental deletions.
+</Warning>
+
+## API Integration
+
+All account book operations connect to Spring Boot REST API:
+
+### Endpoints
+
+| Method | Endpoint | Purpose |
+|--------|----------|----------|
+| GET | `/api/account-books` | Fetch all transactions |
+| POST | `/api/account-books` | Create new transaction |
+| PUT | `/api/account-books/{id}` | Update specific transaction |
+| DELETE | `/api/account-books/batch` | Delete multiple transactions |
+
+### Base URL Configuration
+
+```javascript
+const API_BASE_URL = 'http://localhost:8080/api'
+```
+
+<Note>
+  The API base URL can be configured based on your deployment environment.
+</Note>
+
+## Error Handling
+
+Robust error handling ensures a smooth user experience:
+
+### Connection Errors
+
+When the backend is unavailable:
+
+```javascript
+async checkServerStatus() {
+  try {
+    await axios.get(`${API_BASE_URL}/health`)
+    console.log('後端連線正常')
+    this.isServerOnline = true
+  } catch (error) {
+    console.error('無法連線到後端，請檢查伺服器是否啟動')
+    this.isServerOnline = false
+  }
+}
+```
+
+### Operation Errors
+
+Each operation catches and handles errors:
+
+- **Fetch Failure**: Sets `error` to "無法連線到伺服器"
+- **Add Failure**: Sets `error` to "無法新增記錄"
+- **Update Failure**: Sets `error` to "無法更新記錄"
+- **Delete Failure**: Sets `error` to "無法刪除記錄"
+
+Errors are displayed to users via toast notifications with clear, actionable messages.
+
+## Data Structure
+
+Account book records follow this structure:
+
+```typescript
+interface AccountBook {
+  id: string              // Unique identifier
+  date: string            // ISO 8601 format: "YYYY-MM-DDTHH:mm:ss"
+  amount: number          // Transaction amount in TWD
+  description: string     // Optional note (max 10 characters)
+  actionId: string        // "Income" or "Expenses"
+  categoryId: string      // Category identifier (e.g., "Food")
+  action: string          // Display text: "收入" or "支出"
+  category: string        // Display text: "飲食", "交通", etc.
+}
+```
+
+## Performance Optimizations
+
+<CardGroup cols={2}>
+  <Card title="Virtual Scrolling" icon="scroll">
+    Large transaction lists use virtual scrolling to render only visible rows, maintaining performance with thousands of records.
+  </Card>
+  
+  <Card title="Computed Filters" icon="filter">
+    Getters are computed properties that cache results until dependencies change.
+  </Card>
+  
+  <Card title="Batch Operations" icon="layer-group">
+    Multiple deletions are processed in a single API call to reduce network overhead.
+  </Card>
+  
+  <Card title="Automatic Caching" icon="memory">
+    Pinia store keeps data in memory, eliminating unnecessary API calls.
+  </Card>
+</CardGroup>
+
+## Auto-Refresh System
+
+Keep data synchronized across browser tabs:
+
+```javascript
+onMounted(async () => {
+  await store.fetchAccountBooks()
+  
+  timer = setInterval(async () => {
+    await store.fetchAccountBooks()
+    console.log('Data refreshed')
+  }, 60000)
+})
+
+onBeforeUnmount(() => {
+  clearInterval(timer)
+})
+```
+
+- Data refreshes every 60 seconds automatically
+- Timer is cleared when component unmounts
+- Prevents memory leaks from orphaned intervals
+
+<Tip>
+  The auto-refresh interval is set to 60 seconds by default, balancing data freshness with server load.
+</Tip>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Regular Backups" icon="clone">
+    While data is stored in PostgreSQL, consider periodic backups of your transaction data.
+  </Card>
+  
+  <Card title="Consistent Categories" icon="tags">
+    Use standardized categories across all account books for better analytics.
+  </Card>
+  
+  <Card title="Detailed Descriptions" icon="note-sticky">
+    Add meaningful descriptions to transactions for easier searching and filtering.
+  </Card>
+  
+  <Card title="Monitor Storage" icon="chart-line">
+    Regularly review and archive old transactions to maintain optimal performance.
+  </Card>
+</CardGroup>

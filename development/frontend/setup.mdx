@@ -1,0 +1,241 @@
+---
+title: Frontend Development Setup
+description: Complete guide to setting up the EasyACT frontend development environment
+---
+
+## Overview
+
+EasyACT's frontend is built with Vue 3, Vite, and PrimeVue. This guide will walk you through setting up your development environment and understanding the build configuration.
+
+## Prerequisites
+
+Before you begin, ensure you have the correct Node.js version installed:
+
+<Note>
+  **Node.js Version Requirement**
+  
+  EasyACT requires Node.js `^20.19.0` or `>=22.12.0`
+</Note>
+
+Check your Node.js version:
+
+```bash
+node --version
+```
+
+## Installation
+
+<Steps>
+  <Step title="Navigate to the web directory">
+    ```bash
+    cd workspace/source/web
+    ```
+  </Step>
+
+  <Step title="Install dependencies">
+    Install all required npm packages:
+    
+    ```bash
+    npm install
+    ```
+
+    This will install all dependencies including:
+    - **Vue 3.5.25** - Progressive JavaScript framework
+    - **PrimeVue 4.5.3** - UI component library
+    - **Pinia 3.0.4** - State management
+    - **Vue Router 4.6.3** - Official router
+    - **Axios 1.13.2** - HTTP client
+    - **Chart.js 4.5.1** - Data visualization
+    - **Tailwind CSS 4.1.18** - Utility-first CSS framework
+  </Step>
+
+  <Step title="Start the development server">
+    ```bash
+    npm run dev
+    ```
+
+    The application will be available at `http://localhost:5173` (or another port if 5173 is in use).
+  </Step>
+</Steps>
+
+## Available NPM Scripts
+
+The following scripts are available in `package.json`:
+
+<CodeGroup>
+```bash Development Server
+npm run dev
+# Starts Vite dev server with --host flag
+# Accessible from network devices
+```
+
+```bash Production Build
+npm run build
+# Creates optimized production build
+# Output: dist/ directory
+```
+
+```bash Preview Production Build
+npm run preview
+# Previews the production build locally
+# Runs with --host flag for network access
+```
+
+```bash Lint Code
+npm run lint
+# Runs ESLint with auto-fix and caching
+# Checks all files in the project
+```
+
+```bash Format Code
+npm run format
+# Formats code using Prettier
+# Targets src/ directory only
+```
+</CodeGroup>
+
+## Vite Configuration
+
+The project uses a custom Vite configuration located at `vite.config.js`:
+
+### Key Configuration Features
+
+<AccordionGroup>
+  <Accordion title="Plugins">
+    ```javascript
+    plugins: [
+      vue(),              // Vue 3 SFC support
+      vueDevTools(),      // Vue DevTools integration
+      tailwindcss(),      // Tailwind CSS
+      viteSingleFile()    // Single-file output option
+    ]
+    ```
+  </Accordion>
+
+  <Accordion title="Path Aliases">
+    The `@` alias points to the `src/` directory:
+    
+    ```javascript
+    resolve: {
+      alias: {
+        '@': fileURLToPath(new URL('./src', import.meta.url))
+      }
+    }
+    ```
+
+    Usage example:
+    ```javascript
+    import { useAccountStore } from '@/stores/accountStore'
+    import Overview from '@/components/ChartView/Overview.vue'
+    ```
+  </Accordion>
+
+  <Accordion title="Build Configuration">
+    ```javascript
+    base: './',  // Relative paths for standalone HTML
+    build: {
+      minify: false  // Readable production code
+    }
+    ```
+
+    <Warning>
+      Code minification is **disabled** by default. This produces larger bundle sizes but more readable output.
+    </Warning>
+  </Accordion>
+</AccordionGroup>
+
+## Project Structure
+
+```
+web/
+├── src/
+│   ├── assets/          # Static assets (CSS, images)
+│   ├── components/      # Vue components
+│   │   ├── ChartView/   # Chart-related components
+│   │   └── ListView/    # List-related components
+│   ├── layout/          # Layout components
+│   ├── router/          # Vue Router configuration
+│   ├── stores/          # Pinia stores
+│   ├── theme/           # PrimeVue theme config
+│   ├── views/           # Page components
+│   ├── App.vue          # Root component
+│   └── main.js          # Application entry point
+├── public/              # Public static assets
+├── index.html           # HTML template
+├── package.json         # Dependencies and scripts
+└── vite.config.js       # Vite configuration
+```
+
+## Development Workflow
+
+<Steps>
+  <Step title="Make your changes">
+    Edit Vue components, stores, or other source files. Vite's HMR (Hot Module Replacement) will automatically update the browser.
+  </Step>
+
+  <Step title="Lint and format">
+    Before committing, ensure code quality:
+    
+    ```bash
+    npm run lint
+    npm run format
+    ```
+  </Step>
+
+  <Step title="Test your build">
+    Verify the production build works correctly:
+    
+    ```bash
+    npm run build
+    npm run preview
+    ```
+  </Step>
+</Steps>
+
+## Environment Configuration
+
+The application uses different router modes:
+
+- **Development**: Hash-based routing (`createWebHashHistory`)
+- **API Base URL**: `http://localhost:8080/api`
+
+<Info>
+  The router uses hash-based history to support direct file access without a server. This is configured in `src/router/index.js`.
+</Info>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Port already in use">
+    If port 5173 is already in use, Vite will automatically try the next available port. Check the console output for the actual URL.
+  </Accordion>
+
+  <Accordion title="Module not found errors">
+    Clear the node_modules and reinstall:
+    
+    ```bash
+    rm -rf node_modules package-lock.json
+    npm install
+    ```
+  </Accordion>
+
+  <Accordion title="ESLint or Prettier errors">
+    Run the lint and format commands:
+    
+    ```bash
+    npm run lint
+    npm run format
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Component Structure" icon="cube" href="/development/frontend/components">
+    Learn about Vue component architecture and key components
+  </Card>
+  <Card title="State Management" icon="database" href="/development/frontend/state-management">
+    Understand Pinia stores and state management patterns
+  </Card>
+</CardGroup>

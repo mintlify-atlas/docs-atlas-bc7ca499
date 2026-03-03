@@ -1,0 +1,211 @@
+---
+title: Category Management
+description: Organize your transactions with customizable categories in EasyACT
+---
+
+## Overview
+
+Categories help you organize and analyze your financial transactions by grouping similar expenses and income. EasyACT provides predefined categories and supports automatic category creation when recording transactions.
+
+## Default Categories
+
+EasyACT comes with four default categories designed for common expenses:
+
+<CardGroup cols={2}>
+  <Card title="飲食 (Food)" icon="utensils">
+    Track restaurant meals, groceries, snacks, and all food-related expenses.
+  </Card>
+  
+  <Card title="交通 (Traffic)" icon="car">
+    Record transportation costs including public transit, fuel, parking, and ride-sharing.
+  </Card>
+  
+  <Card title="娛樂 (Entertainment)" icon="gamepad">
+    Monitor spending on movies, games, hobbies, and recreational activities.
+  </Card>
+  
+  <Card title="其他 (Other)" icon="ellipsis">
+    Capture miscellaneous expenses that don't fit into other categories.
+  </Card>
+</CardGroup>
+
+## Category Color Coding
+
+Each category is assigned a unique color for easy visual identification across the application:
+
+<Note>
+  **Category Colors:**
+  - 飲食 (Food): `#FF6B6B` - Red
+  - 交通 (Traffic): `#4ECDC4` - Teal
+  - 娛樂 (Entertainment): `#FFE66D` - Yellow
+  - 購物 (Shopping): `#95E1D3` - Mint
+  - 醫療 (Medical): `#F38181` - Pink
+  - 教育 (Education): `#AA96DA` - Purple
+  - 其他 (Other): `#FCBAD3` - Light Pink
+</Note>
+
+These colors appear consistently throughout the application:
+- Transaction list view (color dot next to category name)
+- Category breakdown charts (pie chart segments)
+- Category analysis tables
+
+## Automatic Category Creation
+
+When you record a transaction, EasyACT intelligently manages categories:
+
+<Steps>
+  <Step title="Category Selection">
+    Select a category from the dropdown when adding or editing a transaction.
+  </Step>
+  
+  <Step title="Database Check">
+    The system checks if the selected category exists in the database.
+  </Step>
+  
+  <Step title="Auto-Creation">
+    If the category doesn't exist, it's automatically created with the appropriate ID and description.
+  </Step>
+  
+  <Step title="Transaction Linkage">
+    The transaction is then linked to the category for proper organization.
+  </Step>
+</Steps>
+
+## Category Data Structure
+
+Categories are stored with the following structure:
+
+```typescript
+{
+  id: string,              // Unique identifier (e.g., "Food", "Traffic")
+  categoryDescription: string  // Display name (e.g., "飲食", "交通")
+}
+```
+
+## Using Categories in Transactions
+
+Categories are seamlessly integrated into the transaction workflow:
+
+### Adding Transactions
+
+When creating a new transaction:
+
+1. Select your desired category from the dropdown menu
+2. The category is validated as required before submission
+3. If the field is empty, an error notification appears: "請選擇類別" (Please select a category)
+
+### Editing Transactions
+
+When modifying existing transactions:
+
+1. The current category is pre-selected in the edit dialog
+2. Change the category by selecting a different option from the dropdown
+3. The updated category is saved when you submit the changes
+
+### Viewing by Category
+
+In the transaction list:
+- Each row displays the category name with its color indicator
+- Sort transactions by category to group similar expenses
+- The color dot provides instant visual recognition
+
+## Category Analytics
+
+Categories play a central role in EasyACT's analytics features:
+
+<CardGroup cols={2}>
+  <Card title="Pie Chart Visualization" icon="chart-pie">
+    See expense distribution across categories with an interactive doughnut chart showing amounts and percentages.
+  </Card>
+  
+  <Card title="Categorized Tables" icon="table">
+    View detailed breakdowns of expenses by category with sortable columns for amount, description, and date.
+  </Card>
+  
+  <Card title="Color-Coded Display" icon="palette">
+    Each category segment in charts uses the same color as in the transaction list for consistency.
+  </Card>
+  
+  <Card title="Total Calculations" icon="calculator">
+    See total amounts spent in each category to identify spending patterns.
+  </Card>
+</CardGroup>
+
+## Category Selection Interface
+
+The category selector provides a user-friendly experience:
+
+```vue
+<Select
+  id="category"
+  v-model="formData.categoryId"
+  :options="categories"
+  :invalid="category_isnull"
+  optionLabel="label"
+  placeholder="請選擇類別"
+  @update:modelValue="handleCategoryChange"
+  class="w-full mb-4"
+/>
+```
+
+<Tip>
+  The dropdown displays the Chinese category names (labels) while storing the English identifiers (values) for database consistency.
+</Tip>
+
+## Category API Endpoints
+
+Manage categories programmatically through these API endpoints:
+
+```javascript
+// Fetch all categories
+GET /api/categories
+
+// Create a new category
+POST /api/categories
+```
+
+**Example: Create Category Request**
+
+```json
+{
+  "id": "Food",
+  "categoryDescription": "飲食"
+}
+```
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Consistent Usage" icon="circle-check">
+    Use the same category for similar transactions to generate meaningful analytics.
+  </Card>
+  
+  <Card title="Appropriate Selection" icon="bullseye">
+    Choose the most specific category that applies rather than defaulting to "Other".
+  </Card>
+  
+  <Card title="Regular Review" icon="magnifying-glass-chart">
+    Check your category breakdown charts monthly to understand spending patterns.
+  </Card>
+  
+  <Card title="Descriptive Notes" icon="pencil">
+    Add descriptions to clarify unusual category choices for future reference.
+  </Card>
+</CardGroup>
+
+## Category in Charts
+
+The Category Breakdown chart uses a dynamic color assignment system:
+
+```javascript
+const categoryColors = [
+  '#de8396', '#78b8e3', '#e6c26c', 
+  '#71c9c9', '#a183de', '#d69c63'
+]
+```
+
+Categories are assigned colors based on their order in the dataset, ensuring consistent visualization across different time periods.
+
+<Note>
+  When viewing monthly expense breakdowns, only categories with transactions in that month appear in the chart.
+</Note>

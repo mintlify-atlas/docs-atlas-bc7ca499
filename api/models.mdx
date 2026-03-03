@@ -1,0 +1,333 @@
+---
+title: 'Data Models'
+description: 'Data models and schemas used in the EasyACT API'
+---
+
+## Overview
+
+This page documents the core data models used throughout the EasyACT API. All models are implemented as JPA entities and stored in a PostgreSQL database.
+
+## AccountBook
+
+The main transaction record entity representing a single financial transaction.
+
+### Entity Definition
+
+```java
+@Entity
+@Table(name = "account_books")
+public class AccountBook {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    
+    private LocalDateTime date;
+    private Double amount;
+    private String description;
+    
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "action")
+    private Action action;
+    
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "category")
+    private Category category;
+}
+```
+
+### Fields
+
+<ResponseField name="id" type="Long">
+  Primary key, auto-generated using identity strategy
+</ResponseField>
+
+<ResponseField name="date" type="LocalDateTime">
+  Transaction date and time in ISO 8601 format
+</ResponseField>
+
+<ResponseField name="amount" type="Double">
+  Transaction amount (can be positive or negative)
+</ResponseField>
+
+<ResponseField name="description" type="String">
+  Textual description of the transaction
+</ResponseField>
+
+<ResponseField name="action" type="Action">
+  Many-to-one relationship to the Action entity (EAGER fetch)
+</ResponseField>
+
+<ResponseField name="category" type="Category">
+  Many-to-one relationship to the Category entity (EAGER fetch)
+</ResponseField>
+
+### DTOs
+
+#### AccountBookRequest
+
+Used for creating and updating account book records.
+
+```json
+{
+  "date": "2026-03-03T10:00:00",
+  "amount": 1000.00,
+  "description": "Monthly Salary",
+  "actionId": "IN",
+  "categoryId": "SALARY"
+}
+```
+
+<ParamField body="date" type="LocalDateTime" required>
+  Transaction date in ISO 8601 format
+</ParamField>
+
+<ParamField body="amount" type="Double" required>
+  Transaction amount
+</ParamField>
+
+<ParamField body="description" type="String" required>
+  Transaction description
+</ParamField>
+
+<ParamField body="actionId" type="String" required>
+  ID of the associated action (foreign key)
+</ParamField>
+
+<ParamField body="categoryId" type="String" required>
+  ID of the associated category (foreign key)
+</ParamField>
+
+#### AccountBookResponse
+
+Returned when retrieving account book records.
+
+```json
+{
+  "id": "1",
+  "date": "2026-03-03T10:00:00",
+  "amount": 1000.00,
+  "description": "Monthly Salary",
+  "action": "Income",
+  "category": "Salary"
+}
+```
+
+<ResponseField name="id" type="String">
+  Unique identifier for the record
+</ResponseField>
+
+<ResponseField name="date" type="String">
+  Transaction date in ISO 8601 format
+</ResponseField>
+
+<ResponseField name="amount" type="Double">
+  Transaction amount
+</ResponseField>
+
+<ResponseField name="description" type="String">
+  Transaction description
+</ResponseField>
+
+<ResponseField name="action" type="String">
+  Action description (resolved from the Action entity)
+</ResponseField>
+
+<ResponseField name="category" type="String">
+  Category description (resolved from the Category entity)
+</ResponseField>
+
+---
+
+## Action
+
+Represents action types (income/expense) that can be assigned to transactions.
+
+### Entity Definition
+
+```java
+@Entity
+@Table(name = "actions")
+public class Action {
+    @Id
+    private String id; // e.g., "IN", "OUT"
+    
+    @Column(name = "action_description")
+    private String actionDescription; // e.g., "Income", "Expense"
+    
+    @OneToMany(mappedBy = "action", fetch = FetchType.LAZY)
+    private List<AccountBook> accountBooks;
+}
+```
+
+### Fields
+
+<ResponseField name="id" type="String">
+  Primary key, manually assigned (e.g., "IN", "OUT")
+</ResponseField>
+
+<ResponseField name="actionDescription" type="String">
+  Human-readable description of the action type
+</ResponseField>
+
+<ResponseField name="accountBooks" type="List<AccountBook>">
+  One-to-many relationship with AccountBook entities (LAZY fetch)
+</ResponseField>
+
+### DTOs
+
+#### ActionRequest
+
+Used for creating and updating actions.
+
+```json
+{
+  "id": "IN",
+  "actionDescription": "Income"
+}
+```
+
+<ParamField body="id" type="String" required>
+  Unique identifier for the action
+</ParamField>
+
+<ParamField body="actionDescription" type="String" required>
+  Description of the action type
+</ParamField>
+
+#### ActionResponse
+
+Returned when retrieving actions.
+
+```json
+{
+  "id": "IN",
+  "actionDescription": "Income"
+}
+```
+
+<ResponseField name="id" type="String">
+  Unique identifier for the action
+</ResponseField>
+
+<ResponseField name="actionDescription" type="String">
+  Description of the action type
+</ResponseField>
+
+---
+
+## Category
+
+Represents transaction categories for organizing expenses and income.
+
+### Entity Definition
+
+```java
+@Entity
+@Table(name = "categories")
+public class Category {
+    @Id
+    private String id;
+    
+    @Column(name = "category_description")
+    private String categoryDescription;
+    
+    @OneToMany(mappedBy = "category", fetch = FetchType.LAZY)
+    private List<AccountBook> accountBooks;
+}
+```
+
+### Fields
+
+<ResponseField name="id" type="String">
+  Primary key, manually assigned (e.g., "FOOD", "TRANSPORT")
+</ResponseField>
+
+<ResponseField name="categoryDescription" type="String">
+  Human-readable description of the category
+</ResponseField>
+
+<ResponseField name="accountBooks" type="List<AccountBook>">
+  One-to-many relationship with AccountBook entities (LAZY fetch)
+</ResponseField>
+
+### DTOs
+
+#### CategoryRequest
+
+Used for creating and updating categories.
+
+```json
+{
+  "id": "FOOD",
+  "categoryDescription": "Food & Dining"
+}
+```
+
+<ParamField body="id" type="String" required>
+  Unique identifier for the category
+</ParamField>
+
+<ParamField body="categoryDescription" type="String" required>
+  Description of the category
+</ParamField>
+
+#### CategoryResponse
+
+Returned when retrieving categories.
+
+```json
+{
+  "id": "FOOD",
+  "categoryDescription": "Food & Dining"
+}
+```
+
+<ResponseField name="id" type="String">
+  Unique identifier for the category
+</ResponseField>
+
+<ResponseField name="categoryDescription" type="String">
+  Description of the category
+</ResponseField>
+
+---
+
+## Database Schema
+
+### Entity Relationships
+
+```
+┌─────────────┐
+│  Action     │
+│             │
+│ - id (PK)   │
+│ - desc      │
+└──────┬──────┘
+       │
+       │ 1
+       │
+       │ *
+┌──────┴──────────┐      ┌─────────────┐
+│  AccountBook    │      │  Category   │
+│                 │      │             │
+│ - id (PK)       │  *   │ - id (PK)   │
+│ - date          │──────│ - desc      │
+│ - amount        │   1  │             │
+│ - description   │      └─────────────┘
+│ - action_id(FK) │
+│ - category_id(FK)│
+└─────────────────┘
+```
+
+### Key Constraints
+
+- `AccountBook.id` - Auto-incrementing BIGINT primary key
+- `Action.id` - VARCHAR primary key (manually assigned)
+- `Category.id` - VARCHAR primary key (manually assigned)
+- `AccountBook.action` - Foreign key to `actions.id`
+- `AccountBook.category` - Foreign key to `categories.id`
+
+### Fetch Strategies
+
+- **EAGER**: `AccountBook` → `Action` and `Category` (loaded immediately with the parent)
+- **LAZY**: `Action` → `AccountBook[]` and `Category` → `AccountBook[]` (loaded on demand)

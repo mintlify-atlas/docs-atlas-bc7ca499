@@ -1,0 +1,446 @@
+---
+title: Vue Component Structure
+description: Comprehensive guide to EasyACT's Vue component architecture and key components
+---
+
+## Component Architecture
+
+EasyACT follows a feature-based component organization pattern. Components are grouped by their primary view or functionality.
+
+## Directory Structure
+
+```
+src/components/
+├── ChartView/
+│   ├── Overview.vue           # Financial overview cards
+│   ├── CategoryChart.vue      # Category breakdown chart
+│   ├── LinerChart.vue         # Time-series line chart
+│   ├── NumberDisplayer.vue    # Animated number display
+│   ├── AccountCard.vue        # Individual account card
+│   ├── RecentAccounts.vue     # Recent transactions list
+│   └── NoRecord.vue           # Empty state component
+└── ListView/
+    └── EditDialog.vue         # Transaction edit dialog
+```
+
+## View Components
+
+Main page components are located in `src/views/`:
+
+<CardGroup cols={2}>
+  <Card title="ChartView" icon="chart-line">
+    Dashboard with financial charts and overview
+  </Card>
+  <Card title="ListView" icon="list">
+    Tabular view of all transactions
+  </Card>
+  <Card title="AddView" icon="plus">
+    Form for adding new transactions
+  </Card>
+</CardGroup>
+
+## Key Components
+
+### Overview Component
+
+Displays three financial summary cards: Total Income, Total Expenses, and Net Balance.
+
+**Location**: `src/components/ChartView/Overview.vue`
+
+<CodeGroup>
+```vue Component Structure
+<script setup>
+import Card from 'primevue/card'
+import NumberDisplayer from './NumberDisplayer.vue'
+
+const props = defineProps({
+  Data: {
+    type: Object,
+    required: true,
+  },
+})
+
+const getCurrentData = (type) => {
+  if (type === 0) {
+    return props.Data.income.reduce((sum, record) => sum + record.amount, 0)
+  } else if (type === 1) {
+    return props.Data.expanse.reduce((sum, record) => sum + record.amount, 0)
+  } else if (type === 2) {
+    return props.Data.income.reduce((sum, record) => sum + record.amount, 0) -
+           props.Data.expanse.reduce((sum, record) => sum + record.amount, 0)
+  }
+}
+</script>
+```
+
+```vue Template
+<template>
+  <div class="flex gap-5 md:flex-row flex-col my-5">
+    <Card class="w-full">
+      <template #title>
+        <div class="bg-[#A2D0FA] p-2 rounded-full inline-block">
+          <i class="material-symbols-outlined">trending_up</i>
+        </div>
+      </template>
+      <template #content>
+        <p class="mt-2">總收入 (Total Income)</p>
+        <NumberDisplayer :value="getCurrentData(0)" />
+      </template>
+    </Card>
+    <!-- Additional cards... -->
+  </div>
+</template>
+```
+</CodeGroup>
+
+**Props**:
+- `Data` (Object, required): Contains `income` and `expanse` arrays
+
+**Features**:
+- Calculates totals from transaction arrays
+- Responsive grid layout (mobile: column, desktop: row)
+- Color-coded icons for each metric
+- Uses NumberDisplayer for animated values
+
+### CategoryChart Component
+
+Displays a doughnut chart and data table showing expense breakdown by category.
+
+**Location**: `src/components/ChartView/CategoryChart.vue`
+
+<CodeGroup>
+```vue Chart Configuration
+<script setup>
+import { ref, computed } from 'vue'
+import Chart from 'primevue/chart'
+import ChartDataLabels from 'chartjs-plugin-datalabels'
+
+const categoryColors = [
+  '#de8396', '#78b8e3', '#e6c26c', 
+  '#71c9c9', '#a183de', '#d69c63'
+]
+
+const chartData = computed(() => {
+  const groupedData = props.Data.reduce((acc, record) => {
+    const category = record.category
+    if (!acc[category]) {
+      acc[category] = 0
+    }
+    acc[category] += record.amount
+    return acc
+  }, {})
+
+  return {
+    labels: Object.keys(groupedData),
+    datasets: [{
+      data: Object.values(groupedData),
+      backgroundColor: labels.map((_, index) => getCategoryColor(index)),
+      hoverOffset: 5,
+    }],
+  }
+})
+</script>
+```
+
+```vue Template with DataTable
+<template>
+  <Card class="w-full h-full">
+    <template #content>
+      <div class="flex flex-col lg:flex-row items-center">
+        <Chart
+          type="doughnut"
+          :data="chartData"
+          :options="chartOptions"
+          :plugins="[ChartDataLabels]"
+        />
+        <DataTable
+          :value="props.Data"
+          scrollable
+          scrollHeight="400px"
+        >
+          <Column field="category" header="類別" sortable />
+          <Column field="amount" header="金額" sortable />
+          <Column field="description" header="說明" />
+          <Column field="date" header="日期" sortable />
+        </DataTable>
+      </div>
+    </template>
+  </Card>
+</template>
+```
+</CodeGroup>
+
+**Props**:
+- `Data` (Object, required): Array of transaction records
+- `isLoading` (Boolean, required): Loading state indicator
+
+**Features**:
+- Automatic category grouping and aggregation
+- Color-coded categories with consistent mapping
+- Chart.js doughnut chart with data labels
+- Sortable, scrollable data table
+- Loading skeletons for better UX
+- Empty state handling with NoRecord component
+
+### EditDialog Component
+
+Modal dialog for editing existing transactions with full validation.
+
+**Location**: `src/components/ListView/EditDialog.vue`
+
+<CodeGroup>
+```vue Reactive Form Data
+<script setup>
+import { ref, computed, reactive, watch } from 'vue'
+import { useAccountStore } from '@/stores/accountStore'
+import { useToast } from 'primevue/usetoast'
+
+const store = useAccountStore()
+const toast = useToast()
+
+const props = defineProps({
+  visible: { type: Boolean, required: true },
+  record: { type: Object, required: false },
+})
+
+const emit = defineEmits(['update:visible'])
+
+const formData = reactive({
+  date: '',
+  amount: 0,
+  description: '',
+  action: '',
+  category: '',
+})
+
+// Watch for record changes
+watch(
+  () => props.record,
+  (newRecord) => {
+    if (newRecord) {
+      formData.date = `${newRecord.date.split('T')[0]} ${newRecord.date.split('T')[1]}`
+      formData.amount = newRecord.amount
+      formData.description = newRecord.description
+      formData.action = newRecord.action
+      formData.category = newRecord.category
+    }
+  },
+  { immediate: true }
+)
+</script>
+```
+
+```vue Form Validation
+const handleSubmit = async () => {
+  if (formData.action === '') {
+    action_isnull.value = true
+    showErrorToast('修改失敗', '請選擇動作')
+  }
+  if (formData.category === '') {
+    category_isnull.value = true
+    showErrorToast('修改失敗', '請選擇類別')
+  }
+  if (formData.amount <= 0 || formData.amount === null) {
+    amount_isnull.value = true
+    showErrorToast('修改失敗', '金額需大於 0')
+  }
+  
+  if (action_isnull.value || category_isnull.value || amount_isnull.value) {
+    return
+  }
+  
+  const response = await store.updateAccountBook(props.record.id, {
+    date: date_split[0] + 'T' + date_split[1],
+    amount: formData.amount,
+    description: formData.description,
+    actionId: actions.value.find((a) => a.label === formData.action).value,
+    categoryId: categories.value.find((c) => c.label === formData.category).value,
+  })
+  
+  if (response) {
+    store.fetchAccountBooks()
+    dialogVisible.value = false
+    toast.add({ severity: 'success', summary: '修改成功' })
+  }
+}
+```
+</CodeGroup>
+
+**Props**:
+- `visible` (Boolean, required): Dialog visibility state
+- `record` (Object, optional): Transaction record to edit
+
+**Emits**:
+- `update:visible`: Two-way binding for dialog visibility
+
+**Features**:
+- Two-way binding with v-model pattern
+- Real-time form validation
+- Date and time pickers (PrimeVue DatePicker)
+- Category and action dropdowns
+- Currency-formatted number input
+- Toast notifications for feedback
+- Reactive error states with visual indicators
+
+## PrimeVue Components Used
+
+EasyACT extensively uses PrimeVue components:
+
+<CardGroup cols={3}>
+  <Card title="Card" icon="square">
+    Container component for content sections
+  </Card>
+  <Card title="Dialog" icon="window-maximize">
+    Modal dialogs for forms and confirmations
+  </Card>
+  <Card title="DataTable" icon="table">
+    Feature-rich data tables with sorting and scrolling
+  </Card>
+  <Card title="Chart" icon="chart-pie">
+    Wrapper for Chart.js integration
+  </Card>
+  <Card title="DatePicker" icon="calendar">
+    Date and time selection
+  </Card>
+  <Card title="Select" icon="caret-down">
+    Dropdown selection components
+  </Card>
+  <Card title="InputNumber" icon="hashtag">
+    Formatted numeric input with spinners
+  </Card>
+  <Card title="InputText" icon="keyboard">
+    Text input fields
+  </Card>
+  <Card title="Button" icon="hand-pointer">
+    Action buttons
+  </Card>
+</CardGroup>
+
+## Component Best Practices
+
+<AccordionGroup>
+  <Accordion title="Use Composition API">
+    All components use Vue 3's `<script setup>` syntax for cleaner, more maintainable code.
+
+    ```vue
+    <script setup>
+    import { ref, computed } from 'vue'
+    
+    const count = ref(0)
+    const doubleCount = computed(() => count.value * 2)
+    </script>
+    ```
+  </Accordion>
+
+  <Accordion title="Props Validation">
+    Always validate props with types and required flags:
+
+    ```javascript
+    const props = defineProps({
+      Data: {
+        type: Object,
+        required: true,
+      },
+      isLoading: {
+        type: Boolean,
+        required: true,
+      },
+    })
+    ```
+  </Accordion>
+
+  <Accordion title="Computed Properties for Derived State">
+    Use computed properties for calculations based on reactive data:
+
+    ```javascript
+    const totalAmount = computed(() => {
+      return props.Data.reduce((sum, item) => sum + item.amount, 0)
+    })
+    ```
+  </Accordion>
+
+  <Accordion title="Store Integration">
+    Import and use Pinia stores in components:
+
+    ```javascript
+    import { useAccountStore } from '@/stores/accountStore'
+    
+    const store = useAccountStore()
+    await store.fetchAccountBooks()
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Styling Approach
+
+EasyACT uses Tailwind CSS for utility-first styling:
+
+```vue
+<template>
+  <div class="flex gap-5 md:flex-row flex-col my-5">
+    <Card class="w-full">
+      <!-- Content -->
+    </Card>
+  </div>
+</template>
+```
+
+<Note>
+  Components combine Tailwind utilities with PrimeVue's built-in styling system. Custom colors are used for category visualization.
+</Note>
+
+## Creating New Components
+
+<Steps>
+  <Step title="Create the component file">
+    ```bash
+    # For feature-specific components
+    touch src/components/ChartView/MyComponent.vue
+    
+    # For shared components
+    touch src/components/MyComponent.vue
+    ```
+  </Step>
+
+  <Step title="Define the component structure">
+    ```vue
+    <script setup>
+    import { ref } from 'vue'
+    
+    const props = defineProps({
+      // Define props
+    })
+    
+    const emit = defineEmits(['event-name'])
+    
+    // Component logic
+    </script>
+    
+    <template>
+      <!-- Template -->
+    </template>
+    
+    <style scoped>
+    /* Component-specific styles */
+    </style>
+    ```
+  </Step>
+
+  <Step title="Import and use in parent">
+    ```vue
+    <script setup>
+    import MyComponent from '@/components/ChartView/MyComponent.vue'
+    </script>
+    
+    <template>
+      <MyComponent :prop="value" @event-name="handler" />
+    </template>
+    ```
+  </Step>
+</Steps>
+
+## Next Steps
+
+<Card title="State Management" icon="database" href="/development/frontend/state-management">
+  Learn how to integrate components with Pinia stores for state management
+</Card>

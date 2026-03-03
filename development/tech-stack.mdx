@@ -1,0 +1,494 @@
+---
+title: Technology Stack
+description: Complete technology stack with versions and dependencies for EasyACT
+---
+
+## Overview
+
+EasyACT is built using modern web technologies across frontend, backend, and database layers. This page documents all technologies, their versions, and specific use cases.
+
+<Note>
+  All version numbers are extracted from `package.json` (frontend) and `pom.xml` (backend) configuration files.
+</Note>
+
+## Frontend Technology Stack
+
+The frontend is a Vue.js 3 application built with Vite and deployed via Nginx.
+
+### Core Framework
+
+<CardGroup cols={2}>
+  <Card title="Vue.js" icon="vuejs">
+    **Version**: 3.5.25
+    
+    Progressive JavaScript framework for building user interfaces with reactive components and composition API.
+  </Card>
+  
+  <Card title="Vite" icon="bolt">
+    **Version**: 7.2.4
+    
+    Next-generation frontend build tool with instant HMR and optimized production builds.
+  </Card>
+</CardGroup>
+
+### Routing & State Management
+
+| Technology | Version | Purpose |
+|------------|---------|----------|
+| **Vue Router** | 4.6.3 | Client-side routing and navigation management |
+| **Pinia** | 3.0.4 | Official Vue state management with intuitive API |
+
+<Tip>
+  Pinia replaced Vuex as the official state management solution for Vue 3, offering better TypeScript support and simpler API.
+</Tip>
+
+### UI Framework & Styling
+
+<AccordionGroup>
+  <Accordion title="PrimeVue - Component Library">
+    **Version**: 4.5.3
+    
+    Comprehensive UI component library providing:
+    - Pre-built components (DataTable, Dialog, Menu, etc.)
+    - Form controls and validation
+    - Responsive layout utilities
+    - Theme customization support
+    
+    **Related Packages**:
+    - `primeicons` 7.0.0 - Icon library
+    - `@primeuix/themes` 2.0.2 - Theme system
+  </Accordion>
+  
+  <Accordion title="Tailwind CSS - Utility-First CSS">
+    **Version**: 4.1.18
+    
+    Utility-first CSS framework for rapid UI development:
+    - Responsive design utilities
+    - Custom color system
+    - Flexbox/Grid layouts
+    - JIT compilation for optimal bundle size
+    
+    **Integration**: `@tailwindcss/vite` 4.1.18
+  </Accordion>
+</AccordionGroup>
+
+### Data Visualization
+
+<Card title="Chart.js" icon="chart-line">
+  **Version**: 4.5.1
+  
+  Flexible JavaScript charting library for visualizing financial data:
+  - Line charts for trends
+  - Pie/Doughnut charts for category distribution
+  - Bar charts for comparisons
+  - Responsive canvas-based rendering
+  
+  **Plugins**:
+  - `chartjs-plugin-datalabels` 2.2.0 - Display data labels on charts
+</Card>
+
+### HTTP Client
+
+```javascript
+// Axios Configuration
+{
+  "package": "axios",
+  "version": "1.13.2",
+  "purpose": "Promise-based HTTP client for API requests"
+}
+```
+
+<Accordion title="Axios Features">
+  - Automatic JSON transformation
+  - Request/response interceptors
+  - Error handling
+  - Timeout configuration
+  - CSRF protection
+</Accordion>
+
+### Utilities & Helpers
+
+| Package | Version | Description |
+|---------|---------|-------------|
+| **@vueuse/core** | 14.1.0 | Collection of essential Vue composition utilities |
+| **GSAP** | 3.14.2 | Professional-grade animation library |
+
+### Development Tools
+
+<CodeGroup>
+```json Frontend DevDependencies
+{
+  "@vitejs/plugin-vue": "6.0.2",
+  "@vue/eslint-config-prettier": "10.2.0",
+  "eslint": "9.39.1",
+  "eslint-plugin-vue": "10.5.1",
+  "prettier": "3.6.2",
+  "vite-plugin-vue-devtools": "8.0.5"
+}
+```
+</CodeGroup>
+
+<CardGroup cols={3}>
+  <Card title="ESLint" icon="check">
+    **9.39.1**
+    
+    Code linting and quality checks
+  </Card>
+  
+  <Card title="Prettier" icon="wand-magic-sparkles">
+    **3.6.2**
+    
+    Opinionated code formatter
+  </Card>
+  
+  <Card title="Vue DevTools" icon="bug">
+    **8.0.5**
+    
+    Browser debugging extension
+  </Card>
+</CardGroup>
+
+### Build Configuration
+
+<Tabs>
+  <Tab title="Node.js Requirements">
+    ```json
+    {
+      "engines": {
+        "node": "^20.19.0 || >=22.12.0"
+      }
+    }
+    ```
+    
+    <Warning>
+      Ensure Node.js version 20.19+ or 22.12+ is installed for compatibility.
+    </Warning>
+  </Tab>
+  
+  <Tab title="Build Scripts">
+    ```bash
+    # Development server with hot reload
+    npm run dev
+    
+    # Production build
+    npm run build
+    
+    # Preview production build
+    npm run preview
+    
+    # Lint code
+    npm run lint
+    
+    # Format code
+    npm run format
+    ```
+  </Tab>
+</Tabs>
+
+### Web Server
+
+<Card title="Nginx" icon="server">
+  **Version**: stable-alpine
+  
+  High-performance HTTP server and reverse proxy:
+  - Serves static Vue.js build files
+  - Gzip compression
+  - Cache headers configuration
+  - SPA fallback routing (all routes → index.html)
+  
+  **Deployment**: Docker container on port 8000
+</Card>
+
+---
+
+## Backend Technology Stack
+
+The backend is a Spring Boot application using Java 25 with Maven for dependency management.
+
+### Core Framework
+
+<Card title="Spring Boot" icon="java">
+  **Version**: 4.0.1
+  
+  Enterprise-grade Java framework providing:
+  - Auto-configuration
+  - Embedded servlet container
+  - Production-ready features
+  - Extensive ecosystem
+  
+  **Artifact**: `com.raylon:api:1.0.0`
+</Card>
+
+### Language & Runtime
+
+```xml
+<properties>
+  <java.version>25</java.version>
+</properties>
+```
+
+<Tip>
+  Java 25 provides latest language features including pattern matching, records, and sealed classes.
+</Tip>
+
+### Spring Modules
+
+<AccordionGroup>
+  <Accordion title="Spring Data JPA">
+    **Module**: `spring-boot-starter-data-jpa`
+    
+    **Features**:
+    - Repository abstraction layer
+    - Automatic query generation
+    - JPA/Hibernate integration
+    - Transaction management
+    - Entity relationship mapping
+    
+    **Usage**: Database access layer with `@Repository` interfaces
+  </Accordion>
+  
+  <Accordion title="Spring Web MVC">
+    **Module**: `spring-boot-starter-webmvc`
+    
+    **Features**:
+    - RESTful API controllers
+    - Request/response handling
+    - JSON serialization (Jackson)
+    - Exception handling
+    - CORS configuration
+    
+    **Usage**: REST endpoints with `@RestController` and `@RequestMapping`
+  </Accordion>
+</AccordionGroup>
+
+### Database Driver
+
+| Dependency | Scope | Description |
+|------------|-------|-------------|
+| **PostgreSQL Driver** | `runtime` | JDBC driver for PostgreSQL database connectivity |
+
+<CodeGroup>
+```xml pom.xml
+<dependency>
+  <groupId>org.postgresql</groupId>
+  <artifactId>postgresql</artifactId>
+  <scope>runtime</scope>
+</dependency>
+```
+</CodeGroup>
+
+### Development Libraries
+
+<CardGroup cols={2}>
+  <Card title="Lombok" icon="code">
+    **Scope**: Optional
+    
+    Reduces boilerplate code with annotations:
+    - `@Getter` / `@Setter` - Auto-generate accessors
+    - `@Data` - Combines common annotations
+    - `@Builder` - Builder pattern
+    - `@Slf4j` - Logger injection
+    
+    See usage in entity models at `api/src/main/java/com/raylon/api/model/`
+  </Card>
+  
+  <Card title="SpringDoc OpenAPI" icon="book">
+    **Version**: 2.6.0
+    
+    Auto-generates OpenAPI 3.0 documentation:
+    - Interactive Swagger UI
+    - API schema generation
+    - Request/response examples
+    
+    **Access**: `http://localhost:8080/swagger-ui.html`
+  </Card>
+</CardGroup>
+
+### Testing Dependencies
+
+```xml
+<!-- Test Scope Dependencies -->
+<dependency>
+  <groupId>org.springframework.boot</groupId>
+  <artifactId>spring-boot-starter-data-jpa-test</artifactId>
+  <scope>test</scope>
+</dependency>
+
+<dependency>
+  <groupId>org.springframework.boot</groupId>
+  <artifactId>spring-boot-starter-webmvc-test</artifactId>
+  <scope>test</scope>
+</dependency>
+```
+
+### Build System
+
+<Tabs>
+  <Tab title="Maven">
+    **Build Tool**: Apache Maven
+    
+    **Key Plugins**:
+    - `maven-compiler-plugin` - Java compilation with Lombok annotation processing
+    - `spring-boot-maven-plugin` - Executable JAR packaging
+    
+    **Build Output**: `api.jar` (final name configured)
+  </Tab>
+  
+  <Tab title="Lombok Configuration">
+    ```xml
+    <plugin>
+      <groupId>org.apache.maven.plugins</groupId>
+      <artifactId>maven-compiler-plugin</artifactId>
+      <configuration>
+        <annotationProcessorPaths>
+          <path>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+          </path>
+        </annotationProcessorPaths>
+      </configuration>
+    </plugin>
+    ```
+  </Tab>
+</Tabs>
+
+---
+
+## Database Technology Stack
+
+<Card title="PostgreSQL" icon="database">
+  **Version**: 15
+  
+  Advanced open-source relational database:
+  - ACID compliance
+  - Complex queries and joins
+  - JSON/JSONB support
+  - Full-text search
+  - Robust indexing
+  
+  **Deployment**: Docker container on port 5432 with persistent volume
+</Card>
+
+### Database Features Used
+
+<AccordionGroup>
+  <Accordion title="Data Types">
+    - `BIGSERIAL` - Auto-incrementing primary keys
+    - `VARCHAR` - String fields (id, description)
+    - `NUMERIC` / `DOUBLE PRECISION` - Financial amounts
+    - `TIMESTAMP` - Date and time records
+  </Accordion>
+  
+  <Accordion title="Constraints">
+    - Primary keys on all tables
+    - Foreign keys for referential integrity
+    - Not null constraints on required fields
+  </Accordion>
+  
+  <Accordion title="Indexes">
+    - Primary key indexes (automatic)
+    - Foreign key indexes for join performance
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Containerization & Deployment
+
+### Docker Stack
+
+<CardGroup cols={3}>
+  <Card title="Docker" icon="docker">
+    Container platform for packaging applications with dependencies
+  </Card>
+  
+  <Card title="Docker Compose" icon="layer-group">
+    Multi-container orchestration for local development and deployment
+  </Card>
+  
+  <Card title="Docker Volumes" icon="hard-drive">
+    Persistent storage for PostgreSQL data
+  </Card>
+</CardGroup>
+
+### Base Images
+
+| Service | Base Image | Purpose |
+|---------|------------|----------|
+| **Web** | `nginx:stable-alpine` | Lightweight web server (Alpine Linux) |
+| **API** | Custom (Java 25) | Spring Boot runtime environment |
+| **DB** | `postgres:15` | PostgreSQL database server |
+
+<Tip>
+  Alpine-based images are preferred for smaller image sizes and faster deployments.
+</Tip>
+
+---
+
+## Version Summary
+
+### Frontend Dependencies Quick Reference
+
+```json
+{
+  "vue": "3.5.25",
+  "vue-router": "4.6.3",
+  "pinia": "3.0.4",
+  "primevue": "4.5.3",
+  "tailwindcss": "4.1.18",
+  "chart.js": "4.5.1",
+  "axios": "1.13.2",
+  "vite": "7.2.4"
+}
+```
+
+### Backend Dependencies Quick Reference
+
+```xml
+<parent>
+  <groupId>org.springframework.boot</groupId>
+  <version>4.0.1</version>
+</parent>
+
+<properties>
+  <java.version>25</java.version>
+</properties>
+
+<dependencies>
+  <!-- Spring Boot Starters -->
+  <dependency>spring-boot-starter-data-jpa</dependency>
+  <dependency>spring-boot-starter-webmvc</dependency>
+  
+  <!-- Database -->
+  <dependency>postgresql</dependency>
+  
+  <!-- Dev Tools -->
+  <dependency>lombok</dependency>
+  
+  <!-- Documentation -->
+  <dependency>springdoc-openapi-starter-webmvc-ui:2.6.0</dependency>
+</dependencies>
+```
+
+### Infrastructure Versions
+
+```yaml
+database: PostgreSQL 15
+web_server: Nginx stable-alpine
+node_runtime: 20.19.0+ or 22.12.0+
+java_runtime: Java 25
+```
+
+---
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="System Architecture" icon="sitemap" href="/development/architecture">
+    Understand how these technologies work together
+  </Card>
+  
+  <Card title="Database Schema" icon="table" href="/development/database-schema">
+    Explore the database structure and entity models
+  </Card>
+</CardGroup>

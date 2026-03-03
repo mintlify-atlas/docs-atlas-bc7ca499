@@ -1,0 +1,310 @@
+---
+title: 'Docker Compose Deployment'
+description: 'Deploy EasyACT using Docker Compose for a complete multi-container setup'
+---
+
+## Overview
+
+EasyACT uses Docker Compose to orchestrate three main services: a PostgreSQL database, a Spring Boot API backend, and an Nginx-served Vue.js frontend. This guide walks you through deploying the complete application stack.
+
+## Prerequisites
+
+Before you begin, ensure you have the following installed:
+
+<CardGroup cols={2}>
+  <Card title="Docker" icon="docker">
+    Version 20.10 or higher
+  </Card>
+  <Card title="Docker Compose" icon="layer-group">
+    Version 2.0 or higher
+  </Card>
+</CardGroup>
+
+Verify your installation:
+
+```bash
+docker --version
+docker-compose --version
+```
+
+## Quick Start
+
+<Steps>
+  <Step title="Clone the repository">
+    ```bash
+    git clone https://github.com/yourusername/easyact.git
+    cd easyact
+    ```
+  </Step>
+
+  <Step title="Review the configuration">
+    The `docker-compose.yml` file defines three services:
+    - **db**: PostgreSQL 15 database
+    - **api**: Spring Boot backend (port 8080)
+    - **web**: Nginx + Vue.js frontend (port 8000)
+  </Step>
+
+  <Step title="Start the services">
+    ```bash
+    docker-compose up -d
+    ```
+    
+    The `-d` flag runs containers in detached mode (background).
+  </Step>
+
+  <Step title="Verify the deployment">
+    Check that all containers are running:
+    ```bash
+    docker-compose ps
+    ```
+    
+    You should see three containers: `easy_act-db`, `easy_act-api`, and `easy_act-web`.
+  </Step>
+
+  <Step title="Access the application">
+    Open your browser and navigate to:
+    ```
+    http://localhost:8000
+    ```
+  </Step>
+</Steps>
+
+## Service Architecture
+
+### Database Service (db)
+
+The PostgreSQL database service stores all application data.
+
+```yaml
+db:
+  image: postgres:15
+  container_name: easy_act-db
+  restart: always
+  environment:
+    POSTGRES_USER: postgres
+    POSTGRES_PASSWORD: postgres_password
+    POSTGRES_DB: easy_act
+  volumes:
+    - ./data:/var/lib/postgresql/data
+  networks:
+    - app-network
+```
+
+<Note>
+  Database data is persisted in the `./data` directory on your host machine. This ensures your data survives container restarts.
+</Note>
+
+### API Service (api)
+
+The Spring Boot backend service handles all business logic and database operations.
+
+```yaml
+api:
+  build:
+    context: ./api
+    dockerfile: Dockerfile
+  container_name: easy_act-api
+  restart: always
+  depends_on:
+    - db
+  ports:
+    - "8080:8080"
+  environment:
+    SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/easy_act
+    SPRING_DATASOURCE_USERNAME: postgres
+    SPRING_DATASOURCE_PASSWORD: postgres_password
+  networks:
+    - app-network
+```
+
+The API is built using a multi-stage Dockerfile:
+
+<Accordion title="API Dockerfile Details">
+  ```dockerfile
+  # Build stage
+  FROM openjdk:25-rc-jdk-bookworm AS build-stage
+  WORKDIR /app
+  COPY . .
+  RUN ./mvnw clean package
+
+  # Production stage
+  FROM openjdk:25-rc-jdk-bookworm AS production-stage
+  WORKDIR /app
+  COPY --from=build-stage /app/target/api.jar api.jar
+  EXPOSE 8080
+  ENTRYPOINT ["java", "-jar", "api.jar"]
+  ```
+
+  This approach:
+  - Separates build and runtime environments
+  - Uses Maven Wrapper for consistent builds
+  - Produces a lean production image
+</Accordion>
+
+### Web Service (web)
+
+The frontend service serves the Vue.js application through Nginx.
+
+```yaml
+web:
+  build:
+    context: ./web
+    dockerfile: Dockerfile
+  container_name: easy_act-web
+  restart: always
+  ports:
+    - "8000:80"
+  depends_on:
+    - api
+  networks:
+    - app-network
+```
+
+<Accordion title="Web Dockerfile Details">
+  ```dockerfile
+  # Build Stage
+  FROM node:lts-alpine AS build-stage
+  WORKDIR /app
+  COPY package*.json ./
+  RUN yarn install
+  COPY . .
+  RUN yarn build
+
+  # Production Stage
+  FROM nginx:stable-alpine AS production-stage
+  COPY --from=build-stage /app/dist /usr/share/nginx/html
+  COPY nginx.conf /etc/nginx/conf.d/default.conf
+  EXPOSE 80
+  CMD ["nginx", "-g", "daemon off;"]
+  ```
+
+  This multi-stage build:
+  - Compiles Vue.js assets with Node.js
+  - Serves static files with Nginx
+  - Supports Vue Router history mode
+</Accordion>
+
+## Network Configuration
+
+All services communicate through a bridge network:
+
+```yaml
+networks:
+  app-network:
+    driver: bridge
+```
+
+This isolated network allows:
+- Service discovery by container name (e.g., `db`, `api`)
+- Secure inter-service communication
+- Port exposure only where needed
+
+## Common Commands
+
+<CodeGroup>
+```bash Start services
+docker-compose up -d
+```
+
+```bash Stop services
+docker-compose down
+```
+
+```bash View logs
+# All services
+docker-compose logs -f
+
+# Specific service
+docker-compose logs -f api
+```
+
+```bash Rebuild services
+# Rebuild all
+docker-compose up -d --build
+
+# Rebuild specific service
+docker-compose up -d --build api
+```
+
+```bash Restart a service
+docker-compose restart api
+```
+
+```bash Check service status
+docker-compose ps
+```
+
+```bash Execute commands in container
+# Access database
+docker-compose exec db psql -U postgres -d easy_act
+
+# Access API container shell
+docker-compose exec api /bin/bash
+```
+</CodeGroup>
+
+## Data Persistence
+
+<Warning>
+  The database volume `./data` contains all your financial data. Always back up this directory before:
+  - Upgrading PostgreSQL versions
+  - Moving to a different host
+  - Making major configuration changes
+</Warning>
+
+### Backup Database
+
+```bash
+# Create backup
+docker-compose exec db pg_dump -U postgres easy_act > backup_$(date +%Y%m%d).sql
+
+# Restore from backup
+cat backup_20260303.sql | docker-compose exec -T db psql -U postgres -d easy_act
+```
+
+## Production Considerations
+
+<AccordionGroup>
+  <Accordion title="Security Hardening">
+    - Change default passwords in environment variables
+    - Use Docker secrets for sensitive data
+    - Restrict database port exposure (remove from `ports` if not needed externally)
+    - Implement SSL/TLS with a reverse proxy
+    - Run containers with non-root users
+  </Accordion>
+
+  <Accordion title="Performance Optimization">
+    - Increase PostgreSQL shared_buffers for better performance
+    - Configure JVM heap size for the API service
+    - Enable gzip compression in Nginx
+    - Use a CDN for static assets
+    - Implement connection pooling
+  </Accordion>
+
+  <Accordion title="Monitoring & Logging">
+    - Configure log rotation to prevent disk space issues
+    - Use a centralized logging solution (ELK, Loki)
+    - Monitor container health with health checks
+    - Set up alerts for service failures
+    - Track resource usage (CPU, memory, disk)
+  </Accordion>
+
+  <Accordion title="High Availability">
+    - Use Docker Swarm or Kubernetes for orchestration
+    - Implement database replication
+    - Set up load balancing for the API
+    - Configure automatic failover
+    - Use managed database services for critical deployments
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Configuration" icon="gear" href="/deployment/configuration">
+    Customize environment variables and application settings
+  </Card>
+  <Card title="Troubleshooting" icon="wrench" href="/deployment/troubleshooting">
+    Resolve common deployment issues
+  </Card>
+</CardGroup>

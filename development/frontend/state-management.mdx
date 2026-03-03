@@ -1,0 +1,623 @@
+---
+title: State Management with Pinia
+description: Complete guide to EasyACT's Pinia store architecture and state management patterns
+---
+
+## Overview
+
+EasyACT uses [Pinia](https://pinia.vuejs.org/) for centralized state management. Pinia is the official state management library for Vue 3, offering a simpler and more intuitive API than Vuex.
+
+<Info>
+  Pinia is installed in `main.js` and available globally throughout the application.
+</Info>
+
+## Store Architecture
+
+EasyACT currently has one main store:
+
+```
+src/stores/
+└── accountStore.js    # Manages all financial data and API calls
+```
+
+## Account Store
+
+The `accountStore` is the central hub for all financial data, managing transactions, categories, and actions.
+
+**Location**: `src/stores/accountStore.js`
+
+### Store Structure
+
+<CodeGroup>
+```javascript State
+import { defineStore } from 'pinia'
+import axios from 'axios'
+
+const API_BASE_URL = 'http://localhost:8080/api'
+
+export const useAccountStore = defineStore('account', {
+  state: () => ({
+    accountBooks: [],      // Array of all transactions
+    isLoading: true,       // Loading state
+    error: null,          // Error message
+  }),
+  // ...
+})
+```
+
+```javascript Getters
+getters: {
+  // Filter income transactions
+  incomeOnly: (state) => {
+    return state.accountBooks.filter((book) => book.actionId === 'Income')
+  },
+  
+  // Filter expense transactions
+  expensesOnly: (state) => {
+    return state.accountBooks.filter((book) => book.actionId === 'Expenses')
+  },
+  
+  // Calculate total amount
+  totalAmount: (state) => {
+    return state.accountBooks.reduce((sum, item) => sum + item.amount, 0)
+  },
+  
+  // Get records by month (with parameter)
+  getRecordsByMonth: (state) => {
+    return (yearMonthString) => {
+      if (!yearMonthString) return state.accountBooks
+      return state.accountBooks.filter((book) => {
+        return book.date && book.date.startsWith(yearMonthString)
+      })
+    }
+  },
+}
+```
+
+```javascript Actions
+actions: {
+  // Check backend server status
+  async checkServerStatus() {
+    try {
+      await axios.get(`${API_BASE_URL}/health`)
+      console.log('後端連線正常')
+      this.isServerOnline = true
+    } catch (error) {
+      console.error('無法連線到後端，請檢查伺服器是否啟動')
+      this.isServerOnline = false
+    }
+  },
+  
+  // Fetch all account books
+  async fetchAccountBooks() {
+    this.isLoading = true
+    this.error = null
+    try {
+      const response = await axios.get(`${API_BASE_URL}/account-books`)
+      this.accountBooks = response.data
+    } catch (err) {
+      this.error = '無法連線到伺服器'
+    } finally {
+      this.isLoading = false
+    }
+  },
+  // ... more actions
+}
+```
+</CodeGroup>
+
+### State Properties
+
+<ResponseField name="accountBooks" type="Array" default="[]">
+  Array of all transaction records fetched from the backend
+</ResponseField>
+
+<ResponseField name="isLoading" type="Boolean" default="true">
+  Loading state indicator for async operations
+</ResponseField>
+
+<ResponseField name="error" type="String | null" default="null">
+  Error message from failed API calls
+</ResponseField>
+
+### Getters
+
+Getters are computed properties that derive state:
+
+<ParamField path="incomeOnly" type="Array">
+  Returns only transactions with `actionId === 'Income'`
+</ParamField>
+
+<ParamField path="expensesOnly" type="Array">
+  Returns only transactions with `actionId === 'Expenses'`
+</ParamField>
+
+<ParamField path="totalAmount" type="Number">
+  Sum of all transaction amounts
+</ParamField>
+
+<ParamField path="getRecordsByMonth" type="Function">
+  Returns a function that filters records by year-month string (e.g., "2024-03")
+  
+  ```javascript
+  // Usage
+  const marchRecords = store.getRecordsByMonth('2024-03')
+  ```
+</ParamField>
+
+### Actions
+
+#### Server Health Check
+
+```javascript
+await store.checkServerStatus()
+```
+
+Checks if the backend server is online by calling the `/api/health` endpoint.
+
+#### Fetch Account Books
+
+```javascript
+await store.fetchAccountBooks()
+```
+
+Fetches all transactions from the backend and updates `accountBooks` state.
+
+<Note>
+  This action sets `isLoading` to `true` at the start and `false` when complete. It also handles errors by setting the `error` state.
+</Note>
+
+#### Add Account Book
+
+```javascript
+const success = await store.addAccountBook({
+  date: '2024-03-03T10:30:00',
+  amount: 1500,
+  description: '午餐',
+  actionId: 'Expenses',
+  categoryId: 'Food'
+})
+```
+
+**Parameters**:
+- `newRecord` (Object): Transaction record to create
+
+**Returns**: `Boolean` - `true` if successful, `false` otherwise
+
+#### Update Account Book
+
+```javascript
+const success = await store.updateAccountBook(recordId, {
+  date: '2024-03-03T10:30:00',
+  amount: 1800,
+  description: '午餐 (更新)',
+  actionId: 'Expenses',
+  categoryId: 'Food'
+})
+```
+
+**Parameters**:
+- `id` (String/Number): Record ID to update
+- `record` (Object): Updated transaction data
+
+**Returns**: `Boolean` - Success status
+
+#### Delete Account Books (Batch)
+
+```javascript
+const success = await store.deleteAccountBooks([1, 2, 3])
+```
+
+**Parameters**:
+- `ids` (Array): Array of record IDs to delete
+
+**Returns**: `Boolean` - Success status
+
+<Warning>
+  This is a batch delete operation. All specified IDs will be deleted in a single API call.
+</Warning>
+
+#### Fetch Categories
+
+```javascript
+const categories = await store.fetchCategories()
+// Returns: [{ id: 'Food', name: '飲食' }, ...]
+```
+
+Fetches available expense/income categories from the backend.
+
+**Returns**: `Array` - Array of category objects (empty array on error)
+
+#### Fetch Actions
+
+```javascript
+const actions = await store.fetchActions()
+// Returns: [{ id: 'Income', name: '收入' }, { id: 'Expenses', name: '支出' }]
+```
+
+Fetches available action types (Income/Expenses).
+
+**Returns**: `Array` - Array of action objects (empty array on error)
+
+#### Add Category
+
+```javascript
+const success = await store.addCategory({
+  id: 'Shopping',
+  name: '購物'
+})
+```
+
+**Parameters**:
+- `newCategory` (Object): Category to create
+
+**Returns**: `Boolean` - Success status
+
+#### Add Action
+
+```javascript
+const success = await store.addAction({
+  id: 'Transfer',
+  name: '轉帳'
+})
+```
+
+**Parameters**:
+- `newAction` (Object): Action type to create
+
+**Returns**: `Boolean` - Success status
+
+## Using the Store in Components
+
+### Basic Usage
+
+<Steps>
+  <Step title="Import the store">
+    ```vue
+    <script setup>
+    import { useAccountStore } from '@/stores/accountStore'
+    </script>
+    ```
+  </Step>
+
+  <Step title="Create store instance">
+    ```vue
+    <script setup>
+    import { useAccountStore } from '@/stores/accountStore'
+    
+    const store = useAccountStore()
+    </script>
+    ```
+  </Step>
+
+  <Step title="Access state and getters">
+    ```vue
+    <script setup>
+    import { useAccountStore } from '@/stores/accountStore'
+    
+    const store = useAccountStore()
+    
+    // Access state
+    console.log(store.accountBooks)
+    console.log(store.isLoading)
+    
+    // Access getters
+    const income = store.incomeOnly
+    const expenses = store.expensesOnly
+    const total = store.totalAmount
+    </script>
+    ```
+  </Step>
+
+  <Step title="Call actions">
+    ```vue
+    <script setup>
+    import { onMounted } from 'vue'
+    import { useAccountStore } from '@/stores/accountStore'
+    
+    const store = useAccountStore()
+    
+    onMounted(async () => {
+      await store.fetchAccountBooks()
+    })
+    
+    const addTransaction = async () => {
+      const success = await store.addAccountBook({
+        date: new Date().toISOString(),
+        amount: 1000,
+        actionId: 'Expenses',
+        categoryId: 'Food'
+      })
+      
+      if (success) {
+        // Refresh data
+        await store.fetchAccountBooks()
+      }
+    }
+    </script>
+    ```
+  </Step>
+</Steps>
+
+### Reactivity with Pinia
+
+<AccordionGroup>
+  <Accordion title="State is automatically reactive">
+    ```vue
+    <template>
+      <div v-if="store.isLoading">Loading...</div>
+      <div v-else>
+        <p>Total records: {{ store.accountBooks.length }}</p>
+      </div>
+    </template>
+    
+    <script setup>
+    import { useAccountStore } from '@/stores/accountStore'
+    const store = useAccountStore()
+    </script>
+    ```
+    
+    The template automatically updates when `store.isLoading` or `store.accountBooks` changes.
+  </Accordion>
+
+  <Accordion title="Using storeToRefs for destructuring">
+    If you need to destructure state while maintaining reactivity:
+    
+    ```vue
+    <script setup>
+    import { storeToRefs } from 'pinia'
+    import { useAccountStore } from '@/stores/accountStore'
+    
+    const store = useAccountStore()
+    const { accountBooks, isLoading, error } = storeToRefs(store)
+    
+    // Now these are reactive refs
+    console.log(accountBooks.value)
+    </script>
+    ```
+    
+    <Warning>
+      Don't destructure actions with `storeToRefs`. Actions should be called directly on the store:
+      
+      ```javascript
+      // ✅ Correct
+      await store.fetchAccountBooks()
+      
+      // ❌ Wrong
+      const { fetchAccountBooks } = storeToRefs(store)
+      ```
+    </Warning>
+  </Accordion>
+
+  <Accordion title="Computed properties with getters">
+    ```vue
+    <script setup>
+    import { computed } from 'vue'
+    import { useAccountStore } from '@/stores/accountStore'
+    
+    const store = useAccountStore()
+    
+    // Getter with parameter
+    const currentMonthRecords = computed(() => {
+      const yearMonth = '2024-03'
+      return store.getRecordsByMonth(yearMonth)
+    })
+    </script>
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## API Integration
+
+All API calls are centralized in the store using Axios.
+
+### API Base URL
+
+```javascript
+const API_BASE_URL = 'http://localhost:8080/api'
+```
+
+<Note>
+  The API base URL is hardcoded. For production, consider using environment variables.
+</Note>
+
+### API Endpoints
+
+<ResponseField name="GET /api/health" type="Health Check">
+  Checks if the backend server is online
+</ResponseField>
+
+<ResponseField name="GET /api/account-books" type="Fetch All">
+  Retrieves all account book records
+</ResponseField>
+
+<ResponseField name="POST /api/account-books" type="Create">
+  Creates a new account book record
+</ResponseField>
+
+<ResponseField name="PUT /api/account-books/:id" type="Update">
+  Updates an existing record by ID
+</ResponseField>
+
+<ResponseField name="DELETE /api/account-books/batch" type="Batch Delete">
+  Deletes multiple records (IDs sent in request body)
+</ResponseField>
+
+<ResponseField name="GET /api/categories" type="Fetch Categories">
+  Retrieves all available categories
+</ResponseField>
+
+<ResponseField name="POST /api/categories" type="Create Category">
+  Creates a new category
+</ResponseField>
+
+<ResponseField name="GET /api/actions" type="Fetch Actions">
+  Retrieves all action types
+</ResponseField>
+
+<ResponseField name="POST /api/actions" type="Create Action">
+  Creates a new action type
+</ResponseField>
+
+## Error Handling
+
+The store implements consistent error handling:
+
+```javascript
+async fetchAccountBooks() {
+  this.isLoading = true
+  this.error = null  // Reset previous errors
+  
+  try {
+    const response = await axios.get(`${API_BASE_URL}/account-books`)
+    this.accountBooks = response.data
+  } catch (err) {
+    this.error = '無法連線到伺服器'
+    // Error is stored in state, components can display it
+  } finally {
+    this.isLoading = false
+  }
+}
+```
+
+### Handling Errors in Components
+
+```vue
+<template>
+  <div v-if="store.error" class="error-message">
+    {{ store.error }}
+  </div>
+</template>
+
+<script setup>
+import { useAccountStore } from '@/stores/accountStore'
+const store = useAccountStore()
+</script>
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Always handle loading states">
+    ```vue
+    <template>
+      <div v-if="store.isLoading">Loading...</div>
+      <div v-else-if="store.error">Error: {{ store.error }}</div>
+      <div v-else>
+        <!-- Display data -->
+      </div>
+    </template>
+    ```
+  </Accordion>
+
+  <Accordion title="Refresh data after mutations">
+    After creating, updating, or deleting records, refresh the data:
+    
+    ```javascript
+    const success = await store.addAccountBook(newRecord)
+    if (success) {
+      await store.fetchAccountBooks()  // Refresh data
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Use getters for derived state">
+    Instead of filtering data in components, use store getters:
+    
+    ```javascript
+    // ✅ Good: Use getter
+    const income = store.incomeOnly
+    
+    // ❌ Avoid: Filter in component
+    const income = store.accountBooks.filter(b => b.actionId === 'Income')
+    ```
+  </Accordion>
+
+  <Accordion title="Don't mutate state directly">
+    Always use actions to modify state:
+    
+    ```javascript
+    // ❌ Wrong: Direct mutation
+    store.accountBooks.push(newRecord)
+    
+    // ✅ Correct: Use action
+    await store.addAccountBook(newRecord)
+    await store.fetchAccountBooks()
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Creating Additional Stores
+
+If you need to add more stores for different features:
+
+<Steps>
+  <Step title="Create the store file">
+    ```bash
+    touch src/stores/userStore.js
+    ```
+  </Step>
+
+  <Step title="Define the store">
+    ```javascript
+    import { defineStore } from 'pinia'
+    
+    export const useUserStore = defineStore('user', {
+      state: () => ({
+        currentUser: null,
+        preferences: {},
+      }),
+      
+      getters: {
+        isLoggedIn: (state) => state.currentUser !== null,
+      },
+      
+      actions: {
+        async login(credentials) {
+          // Implementation
+        },
+      },
+    })
+    ```
+  </Step>
+
+  <Step title="Use in components">
+    ```vue
+    <script setup>
+    import { useUserStore } from '@/stores/userStore'
+    
+    const userStore = useUserStore()
+    </script>
+    ```
+  </Step>
+</Steps>
+
+## Testing Store Actions
+
+When testing components that use stores:
+
+```javascript
+import { setActivePinia, createPinia } from 'pinia'
+import { useAccountStore } from '@/stores/accountStore'
+
+beforeEach(() => {
+  setActivePinia(createPinia())
+})
+
+test('fetches account books', async () => {
+  const store = useAccountStore()
+  await store.fetchAccountBooks()
+  expect(store.accountBooks).toBeDefined()
+})
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Setup Guide" icon="gear" href="/development/frontend/setup">
+    Review frontend setup and build configuration
+  </Card>
+  <Card title="Component Structure" icon="cube" href="/development/frontend/components">
+    Learn how to build components that use stores
+  </Card>
+</CardGroup>

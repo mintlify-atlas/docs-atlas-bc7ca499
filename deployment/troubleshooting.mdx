@@ -1,0 +1,718 @@
+---
+title: 'Troubleshooting'
+description: 'Solutions to common deployment issues and debugging techniques for EasyACT'
+---
+
+## Overview
+
+This guide helps you diagnose and resolve common issues when deploying EasyACT with Docker Compose. Follow the troubleshooting steps systematically to identify the root cause.
+
+## General Debugging Steps
+
+<Steps>
+  <Step title="Check service status">
+    ```bash
+    docker-compose ps
+    ```
+    
+    Look for services that are not in the "Up" state.
+  </Step>
+
+  <Step title="View service logs">
+    ```bash
+    # All services
+    docker-compose logs
+    
+    # Specific service
+    docker-compose logs api
+    docker-compose logs db
+    docker-compose logs web
+    
+    # Follow logs in real-time
+    docker-compose logs -f api
+    ```
+  </Step>
+
+  <Step title="Inspect container details">
+    ```bash
+    docker inspect easy_act-api
+    docker inspect easy_act-db
+    docker inspect easy_act-web
+    ```
+  </Step>
+
+  <Step title="Check network connectivity">
+    ```bash
+    # List networks
+    docker network ls
+    
+    # Inspect the app network
+    docker network inspect easyact_app-network
+    ```
+  </Step>
+</Steps>
+
+## Database Issues
+
+### Database Container Won't Start
+
+<Accordion title="Symptom: Container exits immediately">
+  **Check logs**:
+  ```bash
+  docker-compose logs db
+  ```
+  
+  **Common causes**:
+  
+  1. **Data directory permissions issue**
+     ```bash
+     # Fix permissions
+     sudo chown -R 999:999 ./data
+     ```
+     
+     PostgreSQL runs as user ID 999 inside the container.
+  
+  2. **Corrupted data directory**
+     ```bash
+     # Backup existing data
+     mv ./data ./data.backup
+     
+     # Create fresh directory
+     mkdir ./data
+     
+     # Restart
+     docker-compose up -d db
+     ```
+     
+     <Warning>
+       This creates a new empty database. Restore from backup if needed.
+     </Warning>
+  
+  3. **Port already in use**
+     ```bash
+     # Check what's using port 5432
+     sudo lsof -i :5432
+     
+     # Stop conflicting service or change port in docker-compose.yml
+     ```
+</Accordion>
+
+### Connection Refused Errors
+
+<Accordion title="Symptom: API can't connect to database">
+  **Error in logs**:
+  ```
+  Connection to localhost:5432 refused
+  ```
+  
+  **Solutions**:
+  
+  1. **Verify database is running**
+     ```bash
+     docker-compose ps db
+     ```
+  
+  2. **Check connection string**
+     
+     Ensure `SPRING_DATASOURCE_URL` uses the service name `db`, not `localhost`:
+     ```yaml
+     SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/easy_act
+     ```
+  
+  3. **Wait for database to be ready**
+     
+     Add health check in `docker-compose.yml`:
+     ```yaml
+     db:
+       healthcheck:
+         test: ["CMD-SHELL", "pg_isready -U postgres"]
+         interval: 10s
+         timeout: 5s
+         retries: 5
+     
+     api:
+       depends_on:
+         db:
+           condition: service_healthy
+     ```
+  
+  4. **Test connection manually**
+     ```bash
+     # From API container
+     docker-compose exec api ping db
+     ```
+</Accordion>
+
+### Authentication Failures
+
+<Accordion title="Symptom: Password authentication failed">
+  **Error in logs**:
+  ```
+  FATAL: password authentication failed for user "postgres"
+  ```
+  
+  **Solutions**:
+  
+  1. **Verify credentials match**
+     
+     Ensure database and API have matching credentials:
+     
+     ```yaml
+     db:
+       environment:
+         POSTGRES_USER: postgres
+         POSTGRES_PASSWORD: postgres_password
+     
+     api:
+       environment:
+         SPRING_DATASOURCE_USERNAME: postgres
+         SPRING_DATASOURCE_PASSWORD: postgres_password
+     ```
+  
+  2. **Clear old data if password changed**
+     ```bash
+     docker-compose down -v
+     rm -rf ./data
+     docker-compose up -d
+     ```
+     
+     <Warning>
+       This deletes all database data. Back up first!
+     </Warning>
+</Accordion>
+
+## API Issues
+
+### API Container Fails to Build
+
+<Accordion title="Symptom: Build errors during docker-compose up">
+  **Common causes**:
+  
+  1. **Maven build failures**
+     
+     Check logs for compilation errors:
+     ```bash
+     docker-compose logs api
+     ```
+     
+     Build manually to see detailed errors:
+     ```bash
+     cd api
+     ./mvnw clean package
+     ```
+  
+  2. **Missing dependencies**
+     
+     Ensure Maven Wrapper is executable:
+     ```bash
+     chmod +x api/mvnw
+     ```
+  
+  3. **Network issues during build**
+     
+     Maven can't download dependencies. Check internet connection or configure proxy:
+     ```dockerfile
+     # In api/Dockerfile, before RUN ./mvnw
+     ENV MAVEN_OPTS="-Dhttp.proxyHost=proxy.company.com -Dhttp.proxyPort=8080"
+     ```
+  
+  4. **Force rebuild**
+     ```bash
+     docker-compose build --no-cache api
+     docker-compose up -d api
+     ```
+</Accordion>
+
+### API Container Starts But Crashes
+
+<Accordion title="Symptom: Container keeps restarting">
+  **Check logs**:
+  ```bash
+  docker-compose logs api --tail=100
+  ```
+  
+  **Common causes**:
+  
+  1. **Database connection timeout**
+     
+     See "Connection Refused Errors" section above.
+  
+  2. **Port already in use**
+     ```bash
+     # Check port 8080
+     sudo lsof -i :8080
+     
+     # Change port in docker-compose.yml if needed
+     ports:
+       - "8081:8080"
+     ```
+  
+  3. **Out of memory**
+     
+     Increase container memory:
+     ```yaml
+     api:
+       deploy:
+         resources:
+           limits:
+             memory: 1G
+       environment:
+         JAVA_OPTS: "-Xms512m -Xmx768m"
+     ```
+  
+  4. **Schema migration issues**
+     
+     If using Flyway/Liquibase, check migration logs:
+     ```bash
+     docker-compose logs api | grep -i migration
+     ```
+</Accordion>
+
+### API Endpoints Return 500 Errors
+
+<Accordion title="Symptom: Internal server errors">
+  **Debugging steps**:
+  
+  1. **Enable SQL logging**
+     
+     In `application.properties`:
+     ```properties
+     spring.jpa.show-sql=true
+     logging.level.org.hibernate.SQL=DEBUG
+     logging.level.org.hibernate.type.descriptor.sql.BasicBinder=TRACE
+     ```
+  
+  2. **Check database schema**
+     ```bash
+     docker-compose exec db psql -U postgres -d easy_act
+     ```
+     
+     ```sql
+     \dt  -- List tables
+     \d+ table_name  -- Describe table
+     ```
+  
+  3. **Verify Hibernate DDL setting**
+     
+     Ensure schema exists:
+     ```properties
+     spring.jpa.hibernate.ddl-auto=validate
+     ```
+     
+     Or let Hibernate create it (development only):
+     ```properties
+     spring.jpa.hibernate.ddl-auto=update
+     ```
+</Accordion>
+
+## Web/Frontend Issues
+
+### Web Container Won't Start
+
+<Accordion title="Symptom: Build fails or container exits">
+  **Check logs**:
+  ```bash
+  docker-compose logs web
+  ```
+  
+  **Common causes**:
+  
+  1. **Node build failures**
+     
+     Build manually to see errors:
+     ```bash
+     cd web
+     yarn install
+     yarn build
+     ```
+  
+  2. **Missing dependencies**
+     ```bash
+     cd web
+     rm -rf node_modules
+     yarn install
+     ```
+  
+  3. **Nginx configuration syntax error**
+     
+     Test configuration:
+     ```bash
+     docker run --rm -v $(pwd)/web/nginx.conf:/etc/nginx/conf.d/default.conf nginx nginx -t
+     ```
+  
+  4. **Force rebuild**
+     ```bash
+     docker-compose build --no-cache web
+     docker-compose up -d web
+     ```
+</Accordion>
+
+### Page Shows Blank or 404
+
+<Accordion title="Symptom: Application doesn't load in browser">
+  **Solutions**:
+  
+  1. **Check build output exists**
+     ```bash
+     docker-compose exec web ls -la /usr/share/nginx/html
+     ```
+     
+     Should contain `index.html` and other assets.
+  
+  2. **Verify Nginx is serving files**
+     ```bash
+     docker-compose exec web cat /usr/share/nginx/html/index.html
+     ```
+  
+  3. **Test Nginx configuration**
+     ```bash
+     docker-compose exec web nginx -t
+     ```
+  
+  4. **Check Nginx error logs**
+     ```bash
+     docker-compose exec web cat /var/log/nginx/error.log
+     ```
+  
+  5. **Ensure try_files directive is correct**
+     
+     In `nginx.conf`:
+     ```nginx
+     location / {
+         root   /usr/share/nginx/html;
+         index  index.html index.htm;
+         try_files $uri $uri/ /index.html;
+     }
+     ```
+</Accordion>
+
+### API Calls Fail from Frontend
+
+<Accordion title="Symptom: CORS errors or network failures">
+  **Check browser console** for specific errors.
+  
+  **Solutions**:
+  
+  1. **CORS configuration**
+     
+     Add CORS support in Spring Boot API:
+     ```java
+     @Configuration
+     public class WebConfig {
+         @Bean
+         public WebMvcConfigurer corsConfigurer() {
+             return new WebMvcConfigurer() {
+                 @Override
+                 public void addCorsMappings(CorsRegistry registry) {
+                     registry.addMapping("/**")
+                             .allowedOrigins("http://localhost:8000")
+                             .allowedMethods("GET", "POST", "PUT", "DELETE");
+                 }
+             };
+         }
+     }
+     ```
+  
+  2. **Use Nginx as reverse proxy**
+     
+     See "Add API Proxy" in [Configuration](/deployment/configuration#advanced-nginx-configuration).
+  
+  3. **Verify API is accessible**
+     ```bash
+     curl http://localhost:8080/api/endpoint
+     ```
+</Accordion>
+
+## Network Issues
+
+### Services Can't Communicate
+
+<Accordion title="Symptom: Containers can't reach each other">
+  **Verify network setup**:
+  
+  1. **Check all services are on same network**
+     ```bash
+     docker network inspect easyact_app-network
+     ```
+     
+     All three containers should be listed.
+  
+  2. **Test connectivity between containers**
+     ```bash
+     # From API to DB
+     docker-compose exec api ping db
+     
+     # From Web to API
+     docker-compose exec web ping api
+     ```
+  
+  3. **Verify DNS resolution**
+     ```bash
+     docker-compose exec api nslookup db
+     ```
+  
+  4. **Recreate network**
+     ```bash
+     docker-compose down
+     docker network prune
+     docker-compose up -d
+     ```
+</Accordion>
+
+## Performance Issues
+
+### Slow Database Queries
+
+<Accordion title="Symptom: API responses are slow">
+  **Optimization steps**:
+  
+  1. **Enable query logging**
+     ```properties
+     spring.jpa.show-sql=true
+     logging.level.org.hibernate.SQL=DEBUG
+     ```
+  
+  2. **Add database indexes**
+     ```bash
+     docker-compose exec db psql -U postgres -d easy_act
+     ```
+     
+     ```sql
+     CREATE INDEX idx_user_email ON users(email);
+     CREATE INDEX idx_transaction_date ON transactions(date);
+     ```
+  
+  3. **Increase PostgreSQL memory**
+     
+     In `docker-compose.yml`:
+     ```yaml
+     db:
+       command: postgres -c shared_buffers=256MB -c max_connections=200
+     ```
+  
+  4. **Monitor query performance**
+     ```sql
+     SELECT query, calls, total_time, mean_time 
+     FROM pg_stat_statements 
+     ORDER BY mean_time DESC 
+     LIMIT 10;
+     ```
+</Accordion>
+
+### High Memory Usage
+
+<Accordion title="Symptom: Containers consuming too much RAM">
+  **Solutions**:
+  
+  1. **Limit JVM heap size**
+     ```yaml
+     api:
+       environment:
+         JAVA_OPTS: "-Xms256m -Xmx512m"
+     ```
+  
+  2. **Set Docker memory limits**
+     ```yaml
+     api:
+       deploy:
+         resources:
+           limits:
+             memory: 1G
+           reservations:
+             memory: 512M
+     ```
+  
+  3. **Monitor resource usage**
+     ```bash
+     docker stats
+     ```
+  
+  4. **Enable garbage collection logging**
+     ```yaml
+     environment:
+       JAVA_OPTS: "-Xms512m -Xmx1g -XX:+UseG1GC -XX:+PrintGCDetails"
+     ```
+</Accordion>
+
+## Data Issues
+
+### Lost Data After Restart
+
+<Accordion title="Symptom: Database is empty after restart">
+  **Causes and fixes**:
+  
+  1. **Volume not mounted correctly**
+     
+     Verify volume in `docker-compose.yml`:
+     ```yaml
+     db:
+       volumes:
+         - ./data:/var/lib/postgresql/data
+     ```
+     
+     Check data directory exists:
+     ```bash
+     ls -la ./data
+     ```
+  
+  2. **Used docker-compose down -v**
+     
+     The `-v` flag removes volumes. Never use it in production.
+     
+     Instead use:
+     ```bash
+     docker-compose down
+     docker-compose up -d
+     ```
+  
+  3. **Restore from backup**
+     ```bash
+     cat backup.sql | docker-compose exec -T db psql -U postgres -d easy_act
+     ```
+</Accordion>
+
+### Database Migration Failures
+
+<Accordion title="Symptom: Schema changes don't apply">
+  **Debugging**:
+  
+  1. **Check Hibernate DDL setting**
+     ```properties
+     spring.jpa.hibernate.ddl-auto=update
+     ```
+  
+  2. **Manually apply schema changes**
+     ```bash
+     docker-compose exec db psql -U postgres -d easy_act
+     ```
+     
+     ```sql
+     ALTER TABLE users ADD COLUMN phone VARCHAR(20);
+     ```
+  
+  3. **Use migration tools**
+     
+     Consider Flyway or Liquibase for version-controlled migrations.
+  
+  4. **Reset database (development only)**
+     ```bash
+     docker-compose down
+     rm -rf ./data
+     docker-compose up -d
+     ```
+     
+     <Warning>
+       This deletes all data!
+     </Warning>
+</Accordion>
+
+## Docker-Specific Issues
+
+### "No Space Left on Device"
+
+<Accordion title="Symptom: Build or run fails with disk space error">
+  **Solutions**:
+  
+  1. **Clean up Docker resources**
+     ```bash
+     # Remove unused containers, networks, images
+     docker system prune -a
+     
+     # Remove volumes (careful!)
+     docker volume prune
+     ```
+  
+  2. **Check disk usage**
+     ```bash
+     docker system df
+     ```
+  
+  3. **Remove old images**
+     ```bash
+     docker image prune -a --filter "until=24h"
+     ```
+</Accordion>
+
+### "Permission Denied" Errors
+
+<Accordion title="Symptom: Can't read/write files or access Docker socket">
+  **Solutions**:
+  
+  1. **Fix file permissions**
+     ```bash
+     # For database directory
+     sudo chown -R 999:999 ./data
+     
+     # For build context
+     sudo chown -R $USER:$USER ./api ./web
+     ```
+  
+  2. **Add user to docker group**
+     ```bash
+     sudo usermod -aG docker $USER
+     newgrp docker
+     ```
+  
+  3. **Check SELinux (if applicable)**
+     ```bash
+     # Temporarily disable
+     sudo setenforce 0
+     
+     # Or add :z flag to volumes
+     volumes:
+       - ./data:/var/lib/postgresql/data:z
+     ```
+</Accordion>
+
+## Getting More Help
+
+<CardGroup cols={2}>
+  <Card title="Check Logs" icon="file-lines">
+    ```bash
+    docker-compose logs -f
+    ```
+    
+    Enable debug logging for detailed output.
+  </Card>
+  
+  <Card title="Inspect Containers" icon="magnifying-glass">
+    ```bash
+    docker inspect <container_name>
+    docker exec -it <container_name> /bin/bash
+    ```
+  </Card>
+  
+  <Card title="Test Connectivity" icon="network-wired">
+    ```bash
+    docker-compose exec api ping db
+    curl http://localhost:8080
+    ```
+  </Card>
+  
+  <Card title="Review Configuration" icon="gear">
+    ```bash
+    docker-compose config
+    ```
+    
+    Validates and displays merged configuration.
+  </Card>
+</CardGroup>
+
+<Note>
+  If you're still experiencing issues after trying these solutions, check:
+  - Docker and Docker Compose versions are up to date
+  - System requirements (CPU, RAM, disk) are met
+  - Firewall isn't blocking required ports
+  - Application logs for stack traces and error details
+</Note>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Docker Compose Guide" icon="docker" href="/deployment/docker-compose">
+    Review deployment setup and architecture
+  </Card>
+  <Card title="Configuration" icon="gear" href="/deployment/configuration">
+    Optimize your configuration settings
+  </Card>
+</CardGroup>

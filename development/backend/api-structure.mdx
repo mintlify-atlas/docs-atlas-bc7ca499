@@ -1,0 +1,508 @@
+---
+title: API Project Structure
+description: Understanding the Spring Boot layered architecture and package organization in EasyACT
+---
+
+## Architecture Overview
+
+The EasyACT backend follows the standard Spring Boot layered architecture pattern, separating concerns across Controller, Service, Repository, and Model layers.
+
+```
+com.raylon.api/
+├── ApiApplication.java          # Application entry point
+├── config/                      # Configuration classes
+│   └── OpenAPIConfig.java      # Swagger/OpenAPI setup
+├── controller/                  # REST API endpoints
+│   ├── AccountBookController.java
+│   ├── ActionController.java
+│   ├── CategoryController.java
+│   └── HealthController.java
+├── service/                     # Business logic layer
+│   ├── AccountBookService.java
+│   ├── ActionService.java
+│   └── CategoryService.java
+├── repository/                  # Data access layer
+│   ├── AccountBookRepository.java
+│   ├── ActionRepository.java
+│   └── CategoryRepository.java
+├── model/                       # JPA entities
+│   ├── AccountBook.java
+│   ├── Action.java
+│   └── Category.java
+└── dto/                        # Data transfer objects
+    ├── AccountBookRequest.java
+    ├── AccountBookResponse.java
+    ├── ActionRequest.java
+    ├── ActionResponse.java
+    ├── CategoryRequest.java
+    └── CategoryResponse.java
+```
+
+## Layered Architecture Pattern
+
+<Steps>
+  <Step title="Controller Layer">
+    Handles HTTP requests and responses. Controllers should be thin and delegate business logic to services.
+    
+    **Responsibilities:**
+    - Map HTTP endpoints
+    - Validate request data
+    - Call service methods
+    - Return HTTP responses
+  </Step>
+  
+  <Step title="Service Layer">
+    Contains business logic and orchestrates data operations.
+    
+    **Responsibilities:**
+    - Implement business rules
+    - Handle transactions
+    - Coordinate repository calls
+    - Transform between entities and DTOs
+  </Step>
+  
+  <Step title="Repository Layer">
+    Provides data access abstraction using Spring Data JPA.
+    
+    **Responsibilities:**
+    - Database CRUD operations
+    - Custom query methods
+    - Data persistence
+  </Step>
+  
+  <Step title="Model Layer">
+    Defines JPA entities that map to database tables.
+    
+    **Responsibilities:**
+    - Entity definitions
+    - Database relationships
+    - Constraints and validations
+  </Step>
+</Steps>
+
+## Layer Implementation Examples
+
+### Controller Layer
+
+Controllers handle HTTP requests using Spring MVC annotations and include OpenAPI documentation.
+
+<CodeGroup>
+```java CategoryController.java
+package com.raylon.api.controller;
+
+import java.util.List;
+import org.springframework.web.bind.annotation.*;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import com.raylon.api.service.CategoryService;
+import com.raylon.api.dto.CategoryRequest;
+import com.raylon.api.dto.CategoryResponse;
+
+@RestController
+@RequestMapping("/api/categories")
+@CrossOrigin
+public class CategoryController {
+    private final CategoryService categoryService;
+
+    public CategoryController(CategoryService categoryService) {
+        this.categoryService = categoryService;
+    }
+
+    @Operation(summary = "取得所有類別", description = "查詢類別清單")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "查詢成功")
+    })
+    @GetMapping
+    public List<CategoryResponse> getAllCategories() {
+        return categoryService.getAllCategories();
+    }
+
+    @Operation(summary = "建立新類別", description = "新增一個新的類別")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "建立成功"),
+        @ApiResponse(responseCode = "409", description = "類別代號已存在")
+    })
+    @PostMapping
+    public void createCategory(@RequestBody CategoryRequest request) {
+        categoryService.addCategory(request);
+    }
+
+    @Operation(summary = "刪除類別", description = "刪除指定的類別")
+    @DeleteMapping("/{id}")
+    public void deleteCategory(@PathVariable String id) {
+        categoryService.deleteCategory(id);
+    }
+
+    @Operation(summary = "批次刪除類別", description = "刪除多個指定的類別")
+    @DeleteMapping("/batch")
+    public void deleteCategoriesBatch(@RequestBody List<String> ids) {
+        categoryService.deleteCategoriesBatch(ids);
+    }
+
+    @Operation(summary = "更新類別", description = "更新指定的類別資訊")
+    @PutMapping
+    public void updateCategory(@RequestBody CategoryRequest request) {
+        categoryService.updateCategory(request);
+    }
+}
+```
+
+```java Key Annotations
+// Controller class annotations
+@RestController              // Combines @Controller and @ResponseBody
+@RequestMapping("/api/...")  // Base path for all endpoints
+@CrossOrigin                 // Enable CORS support
+
+// Method annotations
+@GetMapping                  // HTTP GET
+@PostMapping                 // HTTP POST
+@PutMapping                  // HTTP PUT
+@DeleteMapping               // HTTP DELETE
+@PathVariable                // Extract URL path variables
+@RequestBody                 // Parse JSON request body
+
+// OpenAPI documentation
+@Operation                   // Endpoint description
+@ApiResponses                // Response codes documentation
+```
+</CodeGroup>
+
+<Note>
+  **Constructor Injection**: The controller uses constructor-based dependency injection, which is the recommended approach in Spring. It makes dependencies explicit and facilitates testing.
+</Note>
+
+### Service Layer
+
+Services contain business logic and coordinate between controllers and repositories.
+
+```java CategoryService.java
+package com.raylon.api.service;
+
+import java.util.List;
+import java.util.stream.Collectors;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
+import com.raylon.api.dto.CategoryRequest;
+import com.raylon.api.dto.CategoryResponse;
+import com.raylon.api.model.Category;
+import com.raylon.api.repository.CategoryRepository;
+
+@Service
+public class CategoryService {
+    private final CategoryRepository categoryRepository;
+
+    public CategoryService(CategoryRepository categoryRepository) {
+        this.categoryRepository = categoryRepository;
+    }
+
+    public List<CategoryResponse> getAllCategories() {
+        return categoryRepository.findAll()
+            .stream()
+            .map(category -> new CategoryResponse(
+                category.getId(), 
+                category.getCategoryDescription()
+            ))
+            .collect(Collectors.toList());
+    }
+
+    public CategoryResponse addCategory(CategoryRequest request) {
+        if (categoryRepository.existsById(request.getId())) {
+            throw new ResponseStatusException(
+                HttpStatus.CONFLICT, 
+                "Category ID " + request.getId() + " 已經存在"
+            );
+        }
+
+        Category category = new Category();
+        category.setId(request.getId());
+        category.setCategoryDescription(request.getCategoryDescription());
+        Category saved = categoryRepository.save(category);
+        
+        return new CategoryResponse(
+            saved.getId(), 
+            saved.getCategoryDescription()
+        );
+    }
+
+    public void deleteCategory(String id) {
+        if (!categoryRepository.existsById(id)) {
+            throw new ResponseStatusException(
+                HttpStatus.NOT_FOUND, 
+                "Category ID " + id + " 未找到"
+            );
+        }
+        categoryRepository.deleteById(id);
+    }
+
+    public void deleteCategoriesBatch(List<String> ids) {
+        List<Category> categories = categoryRepository.findAllById(ids);
+        if (categories.size() != ids.size()) {
+            throw new ResponseStatusException(
+                HttpStatus.NOT_FOUND, 
+                "有些 Category ID 未找到"
+            );
+        }
+        categoryRepository.deleteAllInBatch(categories);
+    }
+
+    public void updateCategory(CategoryRequest request) {
+        Category category = categoryRepository.findById(request.getId())
+            .orElseThrow(() -> new ResponseStatusException(
+                HttpStatus.NOT_FOUND,
+                "Category ID " + request.getId() + " 未找到"
+            ));
+        
+        category.setId(request.getId());
+        category.setCategoryDescription(request.getCategoryDescription());
+        categoryRepository.save(category);
+    }
+}
+```
+
+<Tip>
+  **Error Handling**: Services use `ResponseStatusException` to throw HTTP errors that Spring automatically converts to proper HTTP responses.
+</Tip>
+
+### Repository Layer
+
+Repositories extend Spring Data JPA interfaces to provide database operations.
+
+```java CategoryRepository.java
+package com.raylon.api.repository;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import com.raylon.api.model.Category;
+
+public interface CategoryRepository extends JpaRepository<Category, String> {
+    // JpaRepository provides built-in methods:
+    // - findAll()
+    // - findById(ID id)
+    // - save(T entity)
+    // - deleteById(ID id)
+    // - existsById(ID id)
+    // - count()
+    // - deleteAllInBatch(Iterable<T> entities)
+    
+    // Custom query methods can be added here
+    // Example: List<Category> findByCategoryDescriptionContaining(String keyword);
+}
+```
+
+<Info>
+  **Spring Data JPA Magic**: By extending `JpaRepository`, you automatically get CRUD operations without writing any implementation code. Spring Data JPA generates the implementation at runtime.
+</Info>
+
+### Model Layer (Entities)
+
+Entities are JPA classes that map to database tables.
+
+```java Category.java
+package com.raylon.api.model;
+
+import java.util.List;
+import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
+
+@Entity
+@Table(name = "categories")
+@Getter
+@Setter
+public class Category {
+
+    @Id
+    @Column(name = "id")
+    private String id;
+
+    @Column(name = "category_description")
+    private String categoryDescription;
+
+    // Bidirectional relationship
+    @OneToMany(mappedBy = "category", fetch = FetchType.LAZY)
+    private List<AccountBook> accountBooks;
+}
+```
+
+<Warning>
+  **Lombok Usage**: The `@Getter` and `@Setter` annotations automatically generate getter and setter methods. Ensure Lombok is properly configured in your IDE.
+</Warning>
+
+### DTO Layer
+
+Data Transfer Objects separate internal entity representation from API contracts.
+
+<CodeGroup>
+```java CategoryRequest.java
+package com.raylon.api.dto;
+
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+@Getter
+@Setter
+@NoArgsConstructor
+public class CategoryRequest {
+    private String id;
+    private String categoryDescription;
+}
+```
+
+```java CategoryResponse.java
+package com.raylon.api.dto;
+
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+
+@Getter
+@AllArgsConstructor
+public class CategoryResponse {
+    private String id;
+    private String categoryDescription;
+}
+```
+</CodeGroup>
+
+## Configuration Layer
+
+### OpenAPI Configuration
+
+Configures Swagger UI for API documentation.
+
+```java OpenAPIConfig.java
+package com.raylon.api.config;
+
+import io.swagger.v3.oas.models.*;
+import io.swagger.v3.oas.models.info.*;
+import io.swagger.v3.oas.models.servers.Server;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import java.util.List;
+
+@Configuration
+public class OpenAPIConfig {
+
+    @Bean
+    public OpenAPI customOpenAPI() {
+        return new OpenAPI()
+            .info(new Info()
+                .title("簡易記帳 API")
+                .description("此 API 提供簡易記帳平台使用。")
+                .version("1.0.0")
+                .contact(null))
+            .servers(List.of(
+                new Server()
+                    .url("http://localhost:8080")
+                    .description("本地開發伺服器")
+            ));
+    }
+}
+```
+
+Access Swagger UI at: `http://localhost:8080/swagger-ui.html`
+
+## Application Entry Point
+
+```java ApiApplication.java
+package com.raylon.api;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class ApiApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(ApiApplication.class, args);
+    }
+}
+```
+
+The `@SpringBootApplication` annotation is a convenience annotation that combines:
+- `@Configuration` - Marks the class as a source of bean definitions
+- `@EnableAutoConfiguration` - Enables Spring Boot's auto-configuration
+- `@ComponentScan` - Scans for components in the current package and sub-packages
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Dependency Injection" icon="syringe">
+    Always use constructor injection instead of field injection for better testability and immutability.
+  </Card>
+  
+  <Card title="Separation of Concerns" icon="layer-group">
+    Keep controllers thin, put business logic in services, and use DTOs to separate API contracts from entities.
+  </Card>
+  
+  <Card title="Exception Handling" icon="triangle-exclamation">
+    Use `ResponseStatusException` in services to throw HTTP errors that Spring automatically handles.
+  </Card>
+  
+  <Card title="API Documentation" icon="book">
+    Use OpenAPI annotations to document endpoints, making the API self-documenting via Swagger UI.
+  </Card>
+</CardGroup>
+
+## Common Patterns
+
+<AccordionGroup>
+  <Accordion title="CRUD Operations Pattern">
+    Standard pattern for implementing CRUD operations:
+    
+    1. **Controller** - Define HTTP endpoints (@GetMapping, @PostMapping, etc.)
+    2. **Service** - Implement business logic and validation
+    3. **Repository** - Extend JpaRepository for data access
+    4. **DTO** - Create Request/Response objects
+    
+    This pattern is consistently used across all entities (Category, Action, AccountBook).
+  </Accordion>
+  
+  <Accordion title="Batch Operations Pattern">
+    For batch deletions or updates:
+    
+    ```java
+    @DeleteMapping("/batch")
+    public void deleteBatch(@RequestBody List<String> ids) {
+        service.deleteBatch(ids);
+    }
+    ```
+    
+    Service layer validates all IDs exist before performing batch operation.
+  </Accordion>
+  
+  <Accordion title="Entity-DTO Mapping Pattern">
+    Transform entities to DTOs in the service layer:
+    
+    ```java
+    return repository.findAll()
+        .stream()
+        .map(entity -> new Response(entity.getId(), entity.getName()))
+        .collect(Collectors.toList());
+    ```
+  </Accordion>
+  
+  <Accordion title="Error Response Pattern">
+    Consistent error handling using ResponseStatusException:
+    
+    ```java
+    if (!repository.existsById(id)) {
+        throw new ResponseStatusException(
+            HttpStatus.NOT_FOUND, 
+            "Resource not found: " + id
+        );
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Database Configuration" icon="database" href="./database">
+    Learn about JPA entities, relationships, and database setup
+  </Card>
+  <Card title="Setup Guide" icon="wrench" href="./setup">
+    Get your development environment configured
+  </Card>
+</CardGroup>

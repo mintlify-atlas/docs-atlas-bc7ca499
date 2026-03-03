@@ -1,0 +1,468 @@
+---
+title: Installation Guide
+description: Complete guide to installing and deploying EasyACT using Docker Compose.
+---
+
+# Installation Guide
+
+EasyACT uses Docker Compose for simplified deployment. This guide covers everything you need to know to get EasyACT running on your system.
+
+## System Requirements
+
+### Required Software
+
+<CardGroup cols={2}>
+  <Card title="Docker" icon="docker">
+    Version 20.10 or later
+  </Card>
+  <Card title="Docker Compose" icon="layer-group">
+    Version 2.0 or later (included with Docker Desktop)
+  </Card>
+  <Card title="Git" icon="git-alt">
+    For cloning the repository
+  </Card>
+  <Card title="Web Browser" icon="browser">
+    Modern browser (Chrome, Firefox, Safari, Edge)
+  </Card>
+</CardGroup>
+
+### Hardware Requirements
+
+- **CPU**: 2 cores minimum (4 cores recommended)
+- **RAM**: 4 GB minimum (8 GB recommended)
+- **Disk**: 2 GB free space
+
+## Docker Installation
+
+If you don't have Docker installed, follow the official installation guides:
+
+<Tabs>
+  <Tab title="Windows">
+    1. Download [Docker Desktop for Windows](https://www.docker.com/products/docker-desktop/)
+    2. Run the installer and follow the setup wizard
+    3. Restart your computer if prompted
+    4. Verify installation:
+
+    ```powershell
+    docker --version
+    docker-compose --version
+    ```
+  </Tab>
+
+  <Tab title="macOS">
+    1. Download [Docker Desktop for Mac](https://www.docker.com/products/docker-desktop/)
+    2. Open the `.dmg` file and drag Docker to Applications
+    3. Launch Docker from Applications
+    4. Verify installation:
+
+    ```bash
+    docker --version
+    docker-compose --version
+    ```
+  </Tab>
+
+  <Tab title="Linux">
+    Install Docker Engine and Docker Compose:
+
+    ```bash
+    # Ubuntu/Debian
+    sudo apt-get update
+    sudo apt-get install docker.io docker-compose
+
+    # Fedora
+    sudo dnf install docker docker-compose
+
+    # Start Docker service
+    sudo systemctl start docker
+    sudo systemctl enable docker
+
+    # Add your user to docker group (optional, to avoid sudo)
+    sudo usermod -aG docker $USER
+    ```
+
+    Verify installation:
+
+    ```bash
+    docker --version
+    docker-compose --version
+    ```
+  </Tab>
+</Tabs>
+
+## Installing EasyACT
+
+<Steps>
+  <Step title="Clone the Repository">
+    Open your terminal and clone the EasyACT repository:
+
+    ```bash
+    git clone https://github.com/RL-Small-Project/EasyACT.git
+    cd EasyACT
+    ```
+  </Step>
+
+  <Step title="Review the Configuration">
+    The `docker-compose.yml` file defines three services:
+
+    ```yaml
+    services:
+      db:
+        image: postgres:15
+        container_name: easy_act-db
+        restart: always
+        environment:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres_password
+          POSTGRES_DB: easy_act
+        volumes:
+          - ./data:/var/lib/postgresql/data
+        networks:
+          - app-network
+
+      api:
+        build:
+          context: ./api
+          dockerfile: Dockerfile
+        container_name: easy_act-api
+        restart: always
+        depends_on:
+          - db
+        ports:
+          - "8080:8080"
+        environment:
+          SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/easy_act
+          SPRING_DATASOURCE_USERNAME: postgres
+          SPRING_DATASOURCE_PASSWORD: postgres_password
+        networks:
+          - app-network
+
+      web:
+        build:
+          context: ./web
+          dockerfile: Dockerfile
+        container_name: easy_act-web
+        restart: always
+        ports:
+          - "8000:80"
+        depends_on:
+          - api
+        networks:
+          - app-network
+
+    networks:
+      app-network:
+        driver: bridge
+    ```
+
+    <Warning>
+    **Security Note**: The default database password is `postgres_password`. For production use, change this to a strong password in the `docker-compose.yml` file.
+    </Warning>
+  </Step>
+
+  <Step title="Build and Start Services">
+    Launch all services with a single command:
+
+    ```bash
+    docker-compose up -d
+    ```
+
+    The `-d` flag runs containers in detached mode (in the background).
+
+    <Note>
+    The first build will take several minutes as Docker:
+    - Downloads the PostgreSQL 15 base image
+    - Builds the Spring Boot API from source using Maven
+    - Builds the Vue.js frontend using Node.js and Vite
+    - Configures the Nginx web server
+    </Note>
+
+    You'll see output similar to:
+
+    ```
+    [+] Building 45.2s (24/24) FINISHED
+    [+] Running 4/4
+     ✔ Network easyact_app-network    Created
+     ✔ Container easy_act-db          Started
+     ✔ Container easy_act-api         Started
+     ✔ Container easy_act-web         Started
+    ```
+  </Step>
+
+  <Step title="Verify Services are Running">
+    Check the status of all containers:
+
+    ```bash
+    docker-compose ps
+    ```
+
+    All three services should show as "running":
+
+    ```
+    NAME              IMAGE              STATUS         PORTS
+    easy_act-db       postgres:15        Up 2 minutes   5432/tcp
+    easy_act-api      easyact-api        Up 2 minutes   0.0.0.0:8080->8080/tcp
+    easy_act-web      easyact-web        Up 2 minutes   0.0.0.0:8000->80/tcp
+    ```
+  </Step>
+
+  <Step title="Access the Application">
+    Open your web browser and navigate to:
+
+    ```
+    http://localhost:8000
+    ```
+
+    You should see the EasyACT dashboard!
+  </Step>
+</Steps>
+
+## Service Details
+
+### Web Service (Frontend)
+
+- **Technology**: Vue.js 3 + Vite + Nginx
+- **Port**: 8000
+- **Container**: `easy_act-web`
+- **Build**: Multi-stage Dockerfile
+  - Stage 1: Node.js builds the Vue.js application
+  - Stage 2: Nginx serves the static files
+
+### API Service (Backend)
+
+- **Technology**: Spring Boot 4 + Java 25
+- **Port**: 8080
+- **Container**: `easy_act-api`
+- **Build**: Multi-stage Dockerfile
+  - Stage 1: Maven builds the JAR file
+  - Stage 2: JDK runs the application
+- **API Documentation**: http://localhost:8080/swagger-ui.html
+
+### Database Service
+
+- **Technology**: PostgreSQL 15
+- **Port**: 5432 (internal only)
+- **Container**: `easy_act-db`
+- **Data Persistence**: `./data` directory
+- **Database Name**: `easy_act`
+- **Default User**: `postgres`
+
+## Configuration Options
+
+### Changing Ports
+
+Edit the `docker-compose.yml` file to change exposed ports:
+
+```yaml
+services:
+  web:
+    ports:
+      - "3000:80"  # Change 8000 to 3000
+  api:
+    ports:
+      - "9090:8080"  # Change 8080 to 9090
+```
+
+Then restart:
+
+```bash
+docker-compose down
+docker-compose up -d
+```
+
+### Database Configuration
+
+To change database credentials, update both the `db` and `api` services:
+
+```yaml
+db:
+  environment:
+    POSTGRES_USER: myuser
+    POSTGRES_PASSWORD: mypassword
+    POSTGRES_DB: mydb
+
+api:
+  environment:
+    SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/mydb
+    SPRING_DATASOURCE_USERNAME: myuser
+    SPRING_DATASOURCE_PASSWORD: mypassword
+```
+
+<Warning>
+If you change database credentials after initial setup, you'll need to delete the data volume or the database won't start with the new credentials.
+</Warning>
+
+## Managing Services
+
+### View Logs
+
+Check logs for all services:
+
+```bash
+docker-compose logs
+```
+
+View logs for a specific service:
+
+```bash
+docker-compose logs web
+docker-compose logs api
+docker-compose logs db
+```
+
+Follow logs in real-time:
+
+```bash
+docker-compose logs -f
+```
+
+### Restart Services
+
+Restart all services:
+
+```bash
+docker-compose restart
+```
+
+Restart a specific service:
+
+```bash
+docker-compose restart api
+```
+
+### Stop Services
+
+Stop containers but keep data:
+
+```bash
+docker-compose stop
+```
+
+Stop and remove containers (data persists):
+
+```bash
+docker-compose down
+```
+
+Stop and remove everything including data:
+
+```bash
+docker-compose down -v
+```
+
+<Warning>
+The `-v` flag will delete all your transaction data! Only use this if you want to completely reset the application.
+</Warning>
+
+### Rebuild Services
+
+If you've made changes to the source code:
+
+```bash
+docker-compose up -d --build
+```
+
+## Data Persistence
+
+Transaction data is stored in the `./data` directory on your host machine. This directory is mounted into the PostgreSQL container:
+
+```yaml
+volumes:
+  - ./data:/var/lib/postgresql/data
+```
+
+<Note>
+Your data will persist even when containers are stopped or removed, as long as you don't use the `-v` flag with `docker-compose down`.
+</Note>
+
+### Backup Your Data
+
+Create a backup of your database:
+
+```bash
+docker-compose exec db pg_dump -U postgres easy_act > backup.sql
+```
+
+Restore from backup:
+
+```bash
+cat backup.sql | docker-compose exec -T db psql -U postgres easy_act
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Port already in use">
+    If you see an error like "port is already allocated":
+
+    1. Check which process is using the port:
+
+    ```bash
+    # Linux/macOS
+    sudo lsof -i :8000
+    sudo lsof -i :8080
+
+    # Windows
+    netstat -ano | findstr :8000
+    netstat -ano | findstr :8080
+    ```
+
+    2. Either stop the conflicting service or change EasyACT's port in `docker-compose.yml`
+  </Accordion>
+
+  <Accordion title="Build fails">
+    Common build issues:
+
+    - **Network issues**: Check your internet connection
+    - **Disk space**: Ensure you have at least 2 GB free
+    - **Cache issues**: Clear Docker build cache:
+
+    ```bash
+    docker-compose build --no-cache
+    ```
+  </Accordion>
+
+  <Accordion title="Database connection errors">
+    If the API can't connect to the database:
+
+    1. Check database is running:
+
+    ```bash
+    docker-compose ps db
+    ```
+
+    2. Check database logs:
+
+    ```bash
+    docker-compose logs db
+    ```
+
+    3. Restart services in order:
+
+    ```bash
+    docker-compose restart db
+    docker-compose restart api
+    docker-compose restart web
+    ```
+  </Accordion>
+
+  <Accordion title="Permission denied on ./data directory">
+    On Linux, you may need to fix permissions:
+
+    ```bash
+    sudo chown -R $USER:$USER ./data
+    ```
+
+    Or run Docker with appropriate permissions.
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Quick Start Guide" icon="rocket" href="/quickstart">
+    Learn how to record your first transaction
+  </Card>
+  <Card title="API Documentation" icon="code" href="http://localhost:8080/swagger-ui.html">
+    Explore the REST API with Swagger UI
+  </Card>
+</CardGroup>

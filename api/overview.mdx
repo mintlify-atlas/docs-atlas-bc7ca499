@@ -1,0 +1,67 @@
+---
+title: 'API Overview'
+description: 'Overview of the EasyACT REST API'
+---
+
+## Introduction
+
+The EasyACT API is a RESTful API built with Spring Boot that provides endpoints for managing personal finance tracking. The API supports operations for account books, actions (income/expense types), and categories.
+
+## Base URL
+
+The API is available at:
+
+```
+http://localhost:8080/api
+```
+
+## API Documentation
+
+Interactive API documentation is available via Swagger UI:
+
+```
+http://localhost:8080/swagger-ui.html
+```
+
+## OpenAPI Specification
+
+The OpenAPI 3.0 specification is automatically generated using SpringDoc OpenAPI and is available at:
+
+```
+http://localhost:8080/v3/api-docs
+```
+
+## CORS Configuration
+
+All API endpoints are configured with `@CrossOrigin`, allowing cross-origin requests from any domain. This is currently suitable for development environments.
+
+## Response Format
+
+All API endpoints return data in JSON format. The API uses standard HTTP status codes:
+
+- `200 OK` - Request succeeded
+- `404 NOT FOUND` - Resource not found
+- `409 CONFLICT` - Resource already exists (for unique constraints)
+
+## Available Resources
+
+The API provides the following main resources:
+
+- **Account Books** - Financial transaction records at `/api/account-books`
+- **Actions** - Income and expense types at `/api/actions`
+- **Categories** - Transaction categories at `/api/categories`
+- **Health** - API health check at `/api/health`
+
+## Quick Start
+
+Here's a simple example to check if the API is running:
+
+```bash
+curl http://localhost:8080/api/health
+```
+
+Expected response:
+
+```json
+{"status": "UP", "database": "OK"}
+```

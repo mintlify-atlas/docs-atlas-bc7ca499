@@ -1,0 +1,252 @@
+---
+title: 'Account Books API'
+description: 'Endpoints for managing financial transaction records'
+---
+
+## Overview
+
+The Account Books API provides endpoints to manage financial transaction records including income and expenses. All endpoints are prefixed with `/api/account-books`.
+
+## Endpoints
+
+### Get All Account Books
+
+Retrieve all account book records.
+
+```http
+GET /api/account-books
+```
+
+#### Response
+
+Returns an array of account book records.
+
+<ResponseField name="response" type="array">
+  Array of AccountBookResponse objects
+  
+  <ResponseField name="id" type="string">
+    Unique identifier for the account book record
+  </ResponseField>
+  
+  <ResponseField name="date" type="string">
+    Transaction date in ISO 8601 format
+  </ResponseField>
+  
+  <ResponseField name="amount" type="number">
+    Transaction amount
+  </ResponseField>
+  
+  <ResponseField name="description" type="string">
+    Description of the transaction
+  </ResponseField>
+  
+  <ResponseField name="action" type="string">
+    Action type (income/expense)
+  </ResponseField>
+  
+  <ResponseField name="category" type="string">
+    Category of the transaction
+  </ResponseField>
+</ResponseField>
+
+#### Example Request
+
+```bash
+curl -X GET http://localhost:8080/api/account-books
+```
+
+#### Example Response
+
+```json
+[
+  {
+    "id": "1",
+    "date": "2026-03-03T10:00:00",
+    "amount": 5000.00,
+    "description": "Monthly Salary",
+    "action": "Income",
+    "category": "Salary"
+  },
+  {
+    "id": "2",
+    "date": "2026-03-02T15:30:00",
+    "amount": 150.00,
+    "description": "Grocery Shopping",
+    "action": "Expense",
+    "category": "Food"
+  }
+]
+```
+
+---
+
+### Create Account Book
+
+Create a new account book record.
+
+```http
+POST /api/account-books
+```
+
+#### Request Body
+
+<ParamField body="date" type="string" required>
+  Transaction date in ISO 8601 format (LocalDateTime)
+</ParamField>
+
+<ParamField body="amount" type="number" required>
+  Transaction amount (positive for income, can be negative for expenses)
+</ParamField>
+
+<ParamField body="description" type="string" required>
+  Description of the transaction
+</ParamField>
+
+<ParamField body="actionId" type="string" required>
+  ID of the action type (e.g., "IN" for income, "OUT" for expense)
+</ParamField>
+
+<ParamField body="categoryId" type="string" required>
+  ID of the category
+</ParamField>
+
+#### Example Request
+
+```bash
+curl -X POST http://localhost:8080/api/account-books \
+  -H "Content-Type: application/json" \
+  -d '{
+    "date": "2026-03-03T10:00:00",
+    "amount": 1000.00,
+    "description": "Freelance Project Payment",
+    "actionId": "IN",
+    "categoryId": "FREELANCE"
+  }'
+```
+
+#### Response
+
+```
+200 OK
+```
+
+---
+
+### Update Account Book
+
+Update an existing account book record.
+
+```http
+PUT /api/account-books/{id}
+```
+
+#### Path Parameters
+
+<ParamField path="id" type="number" required>
+  The unique identifier of the account book record to update
+</ParamField>
+
+#### Request Body
+
+<ParamField body="date" type="string" required>
+  Transaction date in ISO 8601 format (LocalDateTime)
+</ParamField>
+
+<ParamField body="amount" type="number" required>
+  Transaction amount
+</ParamField>
+
+<ParamField body="description" type="string" required>
+  Description of the transaction
+</ParamField>
+
+<ParamField body="actionId" type="string" required>
+  ID of the action type
+</ParamField>
+
+<ParamField body="categoryId" type="string" required>
+  ID of the category
+</ParamField>
+
+#### Example Request
+
+```bash
+curl -X PUT http://localhost:8080/api/account-books/1 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "date": "2026-03-03T10:30:00",
+    "amount": 1500.00,
+    "description": "Updated Freelance Project Payment",
+    "actionId": "IN",
+    "categoryId": "FREELANCE"
+  }'
+```
+
+#### Response
+
+```
+200 OK - Update successful
+404 NOT FOUND - Account book not found
+```
+
+---
+
+### Delete Account Book
+
+Delete a specific account book record.
+
+```http
+DELETE /api/account-books/{id}
+```
+
+#### Path Parameters
+
+<ParamField path="id" type="number" required>
+  The unique identifier of the account book record to delete
+</ParamField>
+
+#### Example Request
+
+```bash
+curl -X DELETE http://localhost:8080/api/account-books/1
+```
+
+#### Response
+
+```
+200 OK - Deletion successful
+404 NOT FOUND - Account book not found
+```
+
+---
+
+### Batch Delete Account Books
+
+Delete multiple account book records at once.
+
+```http
+DELETE /api/account-books/batch
+```
+
+#### Request Body
+
+Array of account book IDs to delete.
+
+<ParamField body="ids" type="array" required>
+  Array of Long values representing account book IDs
+</ParamField>
+
+#### Example Request
+
+```bash
+curl -X DELETE http://localhost:8080/api/account-books/batch \
+  -H "Content-Type: application/json" \
+  -d '[1, 2, 3, 5, 8]'
+```
+
+#### Response
+
+```
+200 OK - Batch deletion successful
+404 NOT FOUND - Some account books not found
+```

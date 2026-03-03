@@ -1,0 +1,214 @@
+---
+title: 'Actions API'
+description: 'Endpoints for managing income and expense action types'
+---
+
+## Overview
+
+The Actions API provides endpoints to manage action types that categorize transactions as income or expenses. All endpoints are prefixed with `/api/actions`.
+
+Actions represent the fundamental type of a transaction (e.g., "IN" for income, "OUT" for expense) and include a description.
+
+## Endpoints
+
+### Get All Actions
+
+Retrieve all action types.
+
+```http
+GET /api/actions
+```
+
+#### Response
+
+Returns an array of action objects.
+
+<ResponseField name="response" type="array">
+  Array of ActionResponse objects
+  
+  <ResponseField name="id" type="string">
+    Unique identifier for the action (e.g., "IN", "OUT")
+  </ResponseField>
+  
+  <ResponseField name="actionDescription" type="string">
+    Description of the action type (e.g., "Income", "Expense")
+  </ResponseField>
+</ResponseField>
+
+#### Example Request
+
+```bash
+curl -X GET http://localhost:8080/api/actions
+```
+
+#### Example Response
+
+```json
+[
+  {
+    "id": "IN",
+    "actionDescription": "Income"
+  },
+  {
+    "id": "OUT",
+    "actionDescription": "Expense"
+  }
+]
+```
+
+---
+
+### Create Action
+
+Create a new action type.
+
+```http
+POST /api/actions
+```
+
+#### Request Body
+
+<ParamField body="id" type="string" required>
+  Unique identifier for the action (e.g., "IN", "OUT", "TRANSFER")
+</ParamField>
+
+<ParamField body="actionDescription" type="string" required>
+  Human-readable description of the action type
+</ParamField>
+
+#### Example Request
+
+```bash
+curl -X POST http://localhost:8080/api/actions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": "TRANSFER",
+    "actionDescription": "Transfer Between Accounts"
+  }'
+```
+
+#### Response
+
+```
+200 OK - Action created successfully
+409 CONFLICT - Action ID already exists
+```
+
+---
+
+### Update Action
+
+Update an existing action type.
+
+```http
+PUT /api/actions
+```
+
+<Note>
+Note: This endpoint does not use a path parameter. The action ID is provided in the request body.
+</Note>
+
+#### Request Body
+
+<ParamField body="id" type="string" required>
+  The identifier of the action to update
+</ParamField>
+
+<ParamField body="actionDescription" type="string" required>
+  Updated description for the action type
+</ParamField>
+
+#### Example Request
+
+```bash
+curl -X PUT http://localhost:8080/api/actions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": "IN",
+    "actionDescription": "Income (Salary & Other)"
+  }'
+```
+
+#### Response
+
+```
+200 OK - Update successful
+404 NOT FOUND - Action not found
+```
+
+---
+
+### Delete Action
+
+Delete a specific action type.
+
+```http
+DELETE /api/actions/{id}
+```
+
+#### Path Parameters
+
+<ParamField path="id" type="string" required>
+  The unique identifier of the action to delete
+</ParamField>
+
+#### Example Request
+
+```bash
+curl -X DELETE http://localhost:8080/api/actions/TRANSFER
+```
+
+#### Response
+
+```
+200 OK - Deletion successful
+404 NOT FOUND - Action not found
+```
+
+<Warning>
+Deleting an action that is referenced by existing account book records may cause integrity constraint violations. Ensure no account books reference this action before deletion.
+</Warning>
+
+---
+
+### Batch Delete Actions
+
+Delete multiple action types at once.
+
+```http
+DELETE /api/actions/batch
+```
+
+#### Request Body
+
+Array of action IDs to delete.
+
+<ParamField body="ids" type="array" required>
+  Array of string values representing action IDs
+</ParamField>
+
+#### Example Request
+
+```bash
+curl -X DELETE http://localhost:8080/api/actions/batch \
+  -H "Content-Type: application/json" \
+  -d '["TRANSFER", "INVESTMENT", "REFUND"]'
+```
+
+#### Response
+
+```
+200 OK - Batch deletion successful
+```
+
+## Common Action Types
+
+Typical action types used in personal finance tracking:
+
+| ID | Description | Usage |
+|----|-------------|-------|
+| `IN` | Income | Salary, bonuses, gifts received |
+| `OUT` | Expense | Purchases, bills, payments |
+| `TRANSFER` | Transfer | Moving money between accounts |
+| `INVESTMENT` | Investment | Stock purchases, savings |
+| `REFUND` | Refund | Returns, reimbursements |

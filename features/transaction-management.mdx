@@ -1,0 +1,162 @@
+---
+title: Transaction Management
+description: Record and manage your income and expenses with EasyACT's intuitive transaction management system
+---
+
+## Overview
+
+EasyACT provides a comprehensive transaction management system that allows you to easily record, edit, and delete your financial transactions. The system supports both income and expense tracking with customizable categories and detailed descriptions.
+
+## Adding Transactions
+
+<Steps>
+  <Step title="Navigate to Add Transaction">
+    Click on the "新增帳單記錄" (Add Transaction Record) page to create a new transaction.
+  </Step>
+  
+  <Step title="Select Date and Time">
+    Choose the transaction date using the inline calendar picker and specify the exact time with the time picker. The system defaults to the current date and time.
+  </Step>
+  
+  <Step title="Enter Transaction Details">
+    Fill in the following required information:
+    - **Action**: Select either "支出" (Expense) or "收入" (Income)
+    - **Category**: Choose from predefined categories like Food, Traffic, Entertainment, or Other
+    - **Amount**: Enter the transaction amount in TWD currency
+    - **Description** (Optional): Add a brief note about the transaction (max 10 characters)
+  </Step>
+  
+  <Step title="Submit the Transaction">
+    Click the "提交" (Submit) button to save your transaction. The system will validate your input and display a success notification.
+  </Step>
+</Steps>
+
+<Note>
+  All fields except the description are required. The amount must be greater than 0 to submit successfully.
+</Note>
+
+## Viewing Transaction List
+
+The transaction list view provides a comprehensive overview of all your financial records:
+
+<CardGroup cols={2}>
+  <Card title="Sortable Columns" icon="arrow-down-up-across-line">
+    Sort transactions by action type, category, amount, or date to quickly find specific records.
+  </Card>
+  
+  <Card title="Color-Coded Categories" icon="palette">
+    Each category is displayed with a unique color indicator for easy visual identification.
+  </Card>
+  
+  <Card title="Real-time Updates" icon="rotate">
+    Transaction data automatically refreshes every 60 seconds to ensure you're viewing the latest information.
+  </Card>
+  
+  <Card title="Responsive Design" icon="mobile">
+    The transaction table adapts to different screen sizes with scrollable columns and virtual scrolling for large datasets.
+  </Card>
+</CardGroup>
+
+## Editing Transactions
+
+Modify existing transactions easily with the built-in edit dialog:
+
+1. **Locate the Transaction**: Find the transaction you want to edit in the transaction list
+2. **Click Edit Icon**: Click the pencil icon (✏️) on the right side of the transaction row
+3. **Modify Details**: Update any field including date, time, action, category, amount, or description
+4. **Save Changes**: Click "提交" (Submit) to save your modifications
+
+<Tip>
+  Hover over the edit button to see a tooltip confirming the action before clicking.
+</Tip>
+
+## Batch Delete Operations
+
+Efficiently manage multiple transactions with batch deletion:
+
+<Steps>
+  <Step title="Select Transactions">
+    Use the checkboxes in the leftmost column to select one or more transactions you want to delete.
+  </Step>
+  
+  <Step title="Click Delete Button">
+    A delete button with a badge showing the number of selected items will appear in the top-right corner.
+  </Step>
+  
+  <Step title="Confirm Deletion">
+    A confirmation dialog will ask you to confirm the deletion of the selected records.
+  </Step>
+  
+  <Step title="Complete">
+    Upon confirmation, the selected transactions will be permanently deleted, and a success notification will appear.
+  </Step>
+</Steps>
+
+<Warning>
+  Batch deletion is permanent and cannot be undone. Please review your selection carefully before confirming.
+</Warning>
+
+## Transaction Display Format
+
+Transactions are displayed with the following information:
+
+| Field | Format | Description |
+|-------|--------|-------------|
+| Action | Color Tag | Red tag for expenses (支出), green tag for income (收入) |
+| Category | Text with Color Dot | Category name with matching color indicator |
+| Amount | Currency Format | Formatted as `$X,XXX` with thousand separators |
+| Description | Plain Text | Optional note about the transaction |
+| Date | YYYY-MM-DD | Transaction date extracted from the full timestamp |
+
+## Input Validation
+
+The system validates your input to ensure data integrity:
+
+<CardGroup cols={2}>
+  <Card title="Required Fields" icon="check">
+    Action, category, and amount fields must be filled before submission.
+  </Card>
+  
+  <Card title="Amount Validation" icon="dollar-sign">
+    Transaction amounts must be positive numbers greater than zero.
+  </Card>
+  
+  <Card title="Description Length" icon="text">
+    Descriptions are limited to 10 characters to maintain data consistency.
+  </Card>
+  
+  <Card title="Error Notifications" icon="triangle-exclamation">
+    Invalid inputs trigger error toasts with clear explanations of what needs to be corrected.
+  </Card>
+</CardGroup>
+
+## Quick Reset
+
+Use the "重置" (Reset) button to quickly clear all form fields and start fresh. This resets:
+- Date and time to current values
+- Amount to 0
+- Description to empty
+- Action and category selections to unselected
+- All validation error states
+
+## API Integration
+
+Transaction management is powered by RESTful API endpoints:
+
+```javascript
+// Create new transaction
+POST /api/account-books
+
+// Fetch all transactions
+GET /api/account-books
+
+// Update transaction
+PUT /api/account-books/{id}
+
+// Batch delete transactions
+DELETE /api/account-books/batch
+```
+
+<Tip>
+  All API operations provide immediate feedback through toast notifications, confirming successful operations or alerting you to errors.
+</Tip>

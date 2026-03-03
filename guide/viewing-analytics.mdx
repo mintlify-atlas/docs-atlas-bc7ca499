@@ -1,0 +1,255 @@
+---
+title: Viewing Analytics
+description: Use EasyACT's powerful charts and reports to understand your spending patterns and financial trends
+---
+
+## Overview
+
+The Analytics page (財務報表) in EasyACT provides comprehensive visual insights into your financial data. It offers multiple chart types and summary views to help you understand your income, expenses, and spending patterns.
+
+## Accessing Analytics
+
+Navigate to the Analytics page by clicking on "Charts" or "財務報表" in the main navigation menu. The analytics view automatically loads your transaction data and displays monthly summaries.
+
+## Month Selection
+
+<Steps>
+  <Step title="Open Month Picker">
+    At the top of the Analytics page, you'll see a date picker displaying the current month in `YYYY-MM` format.
+  </Step>
+
+  <Step title="Select a Month">
+    Click on the date picker to select a different month. The view will automatically update to show data for the selected period.
+    
+    <Info>
+      The analytics page filters all data based on the selected month, showing only transactions from that specific month.
+    </Info>
+  </Step>
+
+  <Step title="View Updates">
+    All charts and summaries automatically refresh when you change the month selection. The filtering logic is handled in `ChartView.vue:18-23`.
+  </Step>
+</Steps>
+
+## Analytics Components
+
+The Analytics page consists of four main components:
+
+### 1. Overview Summary
+
+<Frame>
+  <div style={{backgroundColor: '#f5f7fc', padding: '20px', borderRadius: '8px'}}>
+    <strong>Financial Overview</strong>
+    <div style={{marginTop: '10px'}}>
+      Total Income | Total Expenses | Net Balance
+    </div>
+  </div>
+</Frame>
+
+The Overview component displays:
+- **Total number of transactions** for the selected month
+- **Total income** amount
+- **Total expenses** amount  
+- **Net balance** (income minus expenses)
+
+This gives you a quick snapshot of your financial health for the month.
+
+### 2. Category Chart
+
+<Card title="Category Breakdown" icon="chart-pie">
+  The Category Chart visualizes your expense distribution across different categories using a pie chart or similar visualization.
+  
+  **Features:**
+  - Shows percentage breakdown by category
+  - Color-coded segments matching category colors
+  - Interactive hover details
+  - Only displays expense data (not income)
+  
+  **Location in code:** `ChartView.vue:81` renders the `CategoryChart` component
+</Card>
+
+**What it shows:**
+- How your spending is distributed across categories (Food, Traffic, Game, Other, etc.)
+- Which categories consume the largest portion of your budget
+- Spending patterns and habits
+
+<Tip>
+  Use this chart to identify categories where you might be overspending and opportunities to adjust your budget.
+</Tip>
+
+### 3. Recent Accounts
+
+<Card title="Recent Transactions" icon="list">
+  The Recent Accounts component shows a list of your most recent transactions with quick-view details.
+  
+  **Features:**
+  - Displays recent transaction records
+  - Shows action type (income/expense)
+  - Displays category with color coding
+  - Shows amount and date
+  
+  **Location in code:** `ChartView.vue:84` renders the `RecentAccounts` component
+</Card>
+
+This component provides a convenient way to review recent activity without navigating to the full transaction list.
+
+### 4. Linear Chart (Trend Analysis)
+
+<Card title="Annual Trend Chart" icon="chart-line">
+  The Linear Chart displays your financial trends over the entire year.
+  
+  **Features:**
+  - Shows monthly income and expense trends
+  - Compares income vs. expenses over time
+  - Highlights patterns and seasonal variations
+  - Uses the currently selected year from the date picker
+  
+  **Location in code:** `ChartView.vue:87` renders the `LinerChart` component
+</Card>
+
+**What it shows:**
+- Monthly income and expense totals throughout the year
+- Trends and patterns in your financial behavior
+- Months with highest/lowest activity
+- Overall financial trajectory
+
+## Data Filtering and Computation
+
+The analytics page uses computed properties to filter and process your transaction data:
+
+<CodeGroup>
+```javascript Monthly Records Filter
+// Filters transactions for the selected month
+const monthlyRecords = computed(() => {
+  const year = date.value.getFullYear()
+  const month = String(date.value.getMonth() + 1).padStart(2, '0')
+  const yearMonthString = `${year}-${month}`
+  return store.getRecordsByMonth(yearMonthString)
+})
+```
+
+```javascript Records Summary
+// Separates income and expense records
+const recordsSummary = computed(() => {
+  const records = monthlyRecords.value
+  records.sort((a, b) => new Date(b.date) - new Date(a.date))
+  
+  return {
+    records: records,
+    income: records.filter((book) => book.action === '收入'),
+    expanse: records.filter((record) => record.action === '支出'),
+  }
+})
+```
+</CodeGroup>
+
+These computations are defined in `ChartView.vue:18-34` and automatically recalculate when the selected month changes.
+
+## Auto-Refresh
+
+<Info>
+  The analytics page automatically refreshes data every 60 seconds to ensure you're always viewing the most current information.
+</Info>
+
+The auto-refresh mechanism:
+1. Fetches account books when the component mounts
+2. Sets up a timer to refresh every 60,000 milliseconds (1 minute)
+3. Clears the timer when you leave the page
+
+Implementation details can be found in `ChartView.vue:43-56`.
+
+## Using Analytics Effectively
+
+<AccordionGroup>
+  <Accordion title="Identify Spending Patterns">
+    Use the Category Chart to see which categories consume most of your budget:
+    
+    1. Look for the largest pie slice
+    2. Note if any category seems disproportionately large
+    3. Consider if this aligns with your budget goals
+    4. Make adjustments to spending behavior as needed
+  </Accordion>
+
+  <Accordion title="Track Monthly Trends">
+    Use the Linear Chart to spot trends:
+    
+    - **Rising expenses**: May indicate lifestyle inflation or one-time events
+    - **Falling income**: Could signal need for additional income sources
+    - **Seasonal patterns**: Some months naturally have higher expenses (holidays, etc.)
+    - **Budget alignment**: Compare actual vs. planned spending
+  </Accordion>
+
+  <Accordion title="Monitor Financial Health">
+    The Overview section helps you quickly assess:
+    
+    - **Positive net balance**: Income exceeds expenses (good!)
+    - **Negative net balance**: Expenses exceed income (time to adjust)
+    - **Transaction volume**: High number might indicate detailed tracking or active period
+    - **Month-over-month changes**: Compare to previous months
+  </Accordion>
+
+  <Accordion title="Review Recent Activity">
+    The Recent Accounts section lets you:
+    
+    - Verify that recent transactions are recorded correctly
+    - Spot any errors or duplicates quickly
+    - See recent spending without leaving the analytics page
+    - Quick access to transaction details
+  </Accordion>
+</AccordionGroup>
+
+## Loading States
+
+<Warning>
+  Charts display a loading indicator while fetching data from the server. The `CategoryChart` component receives an `isLoading` prop that shows a loading state until data is ready.
+</Warning>
+
+## No Data State
+
+If you haven't added any transactions for the selected month, the analytics will display empty states or zero values. The `NoRecord` component (referenced in the codebase) handles these scenarios gracefully.
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Review Monthly" icon="calendar">
+    Check your analytics at the end of each month to review spending patterns and adjust your budget for the next month.
+  </Card>
+  
+  <Card title="Compare Periods" icon="arrows-rotate">
+    Use the month selector to compare different months and identify trends over time.
+  </Card>
+  
+  <Card title="Category Analysis" icon="chart-pie">
+    Pay attention to category distribution - it often reveals surprising spending patterns.
+  </Card>
+  
+  <Card title="Set Goals" icon="bullseye">
+    Use the insights from analytics to set specific financial goals for different categories.
+  </Card>
+</CardGroup>
+
+## Chart Customization
+
+The analytics charts are built using components that can display different types of data:
+
+- **Overview**: Displays summary statistics
+- **CategoryChart**: Shows expense breakdown by category
+- **LinerChart**: Displays time-series trends
+- **RecentAccounts**: Lists recent transaction records
+
+Each chart component is located in `/src/components/ChartView/` and can be customized or extended.
+
+## Performance
+
+<Tip>
+  The analytics page uses Vue's computed properties for efficient data processing. Filtering and calculations only run when the underlying data or selected month changes, ensuring smooth performance even with large datasets.
+</Tip>
+
+## What's Next?
+
+After reviewing your analytics:
+
+- [Add more transactions](/guide/adding-transactions) to improve data accuracy
+- [Edit existing records](/guide/managing-account-books) if you spot errors
+- Export reports for detailed analysis (if available)
+- Set budget goals based on your insights

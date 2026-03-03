@@ -1,0 +1,454 @@
+---
+title: 'Configuration Options'
+description: 'Complete reference for environment variables and configuration settings in EasyACT'
+---
+
+## Overview
+
+EasyACT configuration is managed through environment variables in Docker Compose and application properties files. This guide covers all available configuration options for each service.
+
+## Database Configuration
+
+### PostgreSQL Environment Variables
+
+Configured in `docker-compose.yml` under the `db` service:
+
+<ParamField path="POSTGRES_USER" type="string" default="postgres">
+  The PostgreSQL superuser name. Used by the API to connect to the database.
+</ParamField>
+
+<ParamField path="POSTGRES_PASSWORD" type="string" default="postgres_password">
+  The PostgreSQL superuser password.
+  
+  <Warning>
+    **Production**: Change this to a strong, unique password. Never commit production passwords to version control.
+  </Warning>
+</ParamField>
+
+<ParamField path="POSTGRES_DB" type="string" default="easy_act">
+  The name of the database created on initialization. Must match the database name in the API's `SPRING_DATASOURCE_URL`.
+</ParamField>
+
+### Database Volume
+
+```yaml
+volumes:
+  - ./data:/var/lib/postgresql/data
+```
+
+Data is persisted to `./data` on the host machine. Change this path to store data in a different location:
+
+```yaml
+volumes:
+  - /var/lib/easyact/postgres:/var/lib/postgresql/data
+```
+
+## API Configuration
+
+### Spring Boot Environment Variables
+
+Configured in `docker-compose.yml` under the `api` service:
+
+<ParamField path="SPRING_DATASOURCE_URL" type="string" default="jdbc:postgresql://db:5432/easy_act">
+  JDBC connection URL for PostgreSQL.
+  
+  **Format**: `jdbc:postgresql://<host>:<port>/<database>`
+  
+  - `db` refers to the Docker Compose service name
+  - `5432` is the PostgreSQL default port
+  - `easy_act` is the database name
+</ParamField>
+
+<ParamField path="SPRING_DATASOURCE_USERNAME" type="string" default="postgres">
+  Database username. Must match `POSTGRES_USER` from the database service.
+</ParamField>
+
+<ParamField path="SPRING_DATASOURCE_PASSWORD" type="string" default="postgres_password">
+  Database password. Must match `POSTGRES_PASSWORD` from the database service.
+</ParamField>
+
+### Application Properties
+
+Located at `api/src/main/resources/application.properties`:
+
+```properties
+# --- PostgreSQL DataSource Configuration ---
+spring.datasource.url=jdbc:postgresql://db:5432/easy_act
+spring.datasource.username=postgres
+spring.datasource.password=postgres_password
+spring.datasource.driver-class-name=org.postgresql.Driver
+
+# --- JPA Configuration ---
+spring.jpa.hibernate.ddl-auto=none
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
+
+# --- Server ---
+server.port=8080
+```
+
+<Note>
+  Environment variables in `docker-compose.yml` override values in `application.properties`.
+</Note>
+
+#### JPA Settings
+
+<ParamField path="spring.jpa.hibernate.ddl-auto" type="string" default="none">
+  Hibernate schema generation strategy.
+  
+  **Options**:
+  - `none`: No automatic schema management (recommended for production)
+  - `validate`: Validate schema, make no changes
+  - `update`: Update schema automatically
+  - `create`: Create schema, destroying previous data
+  - `create-drop`: Create schema, drop on shutdown
+  
+  <Warning>
+    Use `none` or `validate` in production to prevent accidental data loss.
+  </Warning>
+</ParamField>
+
+<ParamField path="spring.jpa.show-sql" type="boolean" default="true">
+  Log SQL statements to console. Set to `false` in production for better performance.
+</ParamField>
+
+<ParamField path="spring.jpa.properties.hibernate.dialect" type="string" default="org.hibernate.dialect.PostgreSQLDialect">
+  Hibernate dialect for PostgreSQL. Ensures optimal SQL generation.
+</ParamField>
+
+#### Server Settings
+
+<ParamField path="server.port" type="number" default="8080">
+  Port the Spring Boot application listens on inside the container.
+  
+  If you change this, update the Docker Compose port mapping:
+  ```yaml
+  ports:
+    - "8080:8081"  # If server.port=8081
+  ```
+</ParamField>
+
+### Additional Environment Variables
+
+You can add these to `docker-compose.yml` for advanced configuration:
+
+<CodeGroup>
+```yaml JVM Memory Settings
+environment:
+  JAVA_OPTS: "-Xms512m -Xmx1024m"
+  SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/easy_act
+  SPRING_DATASOURCE_USERNAME: postgres
+  SPRING_DATASOURCE_PASSWORD: postgres_password
+```
+
+```yaml Logging Configuration
+environment:
+  LOGGING_LEVEL_ROOT: INFO
+  LOGGING_LEVEL_COM_EASYACT: DEBUG
+  SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/easy_act
+  SPRING_DATASOURCE_USERNAME: postgres
+  SPRING_DATASOURCE_PASSWORD: postgres_password
+```
+
+```yaml Profile Selection
+environment:
+  SPRING_PROFILES_ACTIVE: production
+  SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/easy_act
+  SPRING_DATASOURCE_USERNAME: postgres
+  SPRING_DATASOURCE_PASSWORD: postgres_password
+```
+</CodeGroup>
+
+## Web Configuration
+
+### Port Mapping
+
+The web service exposes port 80 (Nginx) as port 8000 on the host:
+
+```yaml
+ports:
+  - "8000:80"
+```
+
+To use a different port:
+
+```yaml
+ports:
+  - "3000:80"  # Access at http://localhost:3000
+```
+
+### Nginx Configuration
+
+Located at `web/nginx.conf`:
+
+```nginx
+server {
+    listen       80;
+    server_name  localhost;
+
+    location / {
+        root   /usr/share/nginx/html;
+        index  index.html index.htm;
+        # Important: Support Vue Router History Mode
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Error page handling
+    error_page   500 502 503 504  /50x.html;
+    location = /50x.html {
+        root   /usr/share/nginx/html;
+    }
+}
+```
+
+#### Key Directives
+
+<ParamField path="listen" type="number" default="80">
+  Port Nginx listens on inside the container. Typically kept at 80.
+</ParamField>
+
+<ParamField path="server_name" type="string" default="localhost">
+  Server name for virtual hosting. In production, set this to your domain:
+  ```nginx
+  server_name  app.easyact.com;
+  ```
+</ParamField>
+
+<ParamField path="try_files" type="string" default="$uri $uri/ /index.html">
+  Enables Vue Router history mode. All non-file requests fall back to `index.html`.
+</ParamField>
+
+### Advanced Nginx Configuration
+
+<Accordion title="Add API Proxy">
+  Forward API requests to the backend:
+  
+  ```nginx
+  server {
+      listen       80;
+      server_name  localhost;
+
+      # Frontend
+      location / {
+          root   /usr/share/nginx/html;
+          index  index.html index.htm;
+          try_files $uri $uri/ /index.html;
+      }
+
+      # API Proxy
+      location /api/ {
+          proxy_pass http://api:8080/;
+          proxy_set_header Host $host;
+          proxy_set_header X-Real-IP $remote_addr;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto $scheme;
+      }
+
+      error_page   500 502 503 504  /50x.html;
+      location = /50x.html {
+          root   /usr/share/nginx/html;
+      }
+  }
+  ```
+</Accordion>
+
+<Accordion title="Enable Gzip Compression">
+  Reduce bandwidth and improve load times:
+  
+  ```nginx
+  server {
+      listen       80;
+      server_name  localhost;
+
+      # Gzip compression
+      gzip on;
+      gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;
+      gzip_min_length 1000;
+
+      location / {
+          root   /usr/share/nginx/html;
+          index  index.html index.htm;
+          try_files $uri $uri/ /index.html;
+      }
+
+      error_page   500 502 503 504  /50x.html;
+      location = /50x.html {
+          root   /usr/share/nginx/html;
+      }
+  }
+  ```
+</Accordion>
+
+<Accordion title="Add SSL/TLS Support">
+  Secure your application with HTTPS:
+  
+  ```nginx
+  server {
+      listen       443 ssl;
+      server_name  app.easyact.com;
+
+      ssl_certificate     /etc/nginx/ssl/cert.pem;
+      ssl_certificate_key /etc/nginx/ssl/key.pem;
+      ssl_protocols       TLSv1.2 TLSv1.3;
+      ssl_ciphers         HIGH:!aNULL:!MD5;
+
+      location / {
+          root   /usr/share/nginx/html;
+          index  index.html index.htm;
+          try_files $uri $uri/ /index.html;
+      }
+  }
+
+  # Redirect HTTP to HTTPS
+  server {
+      listen 80;
+      server_name app.easyact.com;
+      return 301 https://$server_name$request_uri;
+  }
+  ```
+  
+  Mount SSL certificates in `docker-compose.yml`:
+  ```yaml
+  web:
+    volumes:
+      - ./ssl:/etc/nginx/ssl:ro
+  ```
+</Accordion>
+
+## Environment-Specific Configuration
+
+### Development Environment
+
+Create `docker-compose.dev.yml`:
+
+```yaml
+services:
+  api:
+    environment:
+      SPRING_PROFILES_ACTIVE: development
+      SPRING_JPA_SHOW_SQL: "true"
+      LOGGING_LEVEL_ROOT: DEBUG
+  
+  db:
+    ports:
+      - "5432:5432"  # Expose for local access
+```
+
+Run with:
+```bash
+docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+```
+
+### Production Environment
+
+Create `docker-compose.prod.yml`:
+
+```yaml
+services:
+  api:
+    environment:
+      SPRING_PROFILES_ACTIVE: production
+      SPRING_JPA_SHOW_SQL: "false"
+      LOGGING_LEVEL_ROOT: WARN
+      JAVA_OPTS: "-Xms1g -Xmx2g"
+  
+  db:
+    environment:
+      POSTGRES_PASSWORD: ${DB_PASSWORD}  # Use secret from .env
+```
+
+Run with:
+```bash
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+```
+
+## Using Environment Files
+
+Create a `.env` file in the project root:
+
+```bash
+# Database
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=secure_password_here
+POSTGRES_DB=easy_act
+
+# API
+SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/easy_act
+SPRING_DATASOURCE_USERNAME=postgres
+SPRING_DATASOURCE_PASSWORD=secure_password_here
+
+# Ports
+API_PORT=8080
+WEB_PORT=8000
+DB_PORT=5432
+```
+
+Reference in `docker-compose.yml`:
+
+```yaml
+services:
+  db:
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+  
+  api:
+    ports:
+      - "${API_PORT}:8080"
+    environment:
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
+  
+  web:
+    ports:
+      - "${WEB_PORT}:80"
+```
+
+<Warning>
+  Never commit `.env` files containing secrets to version control. Add `.env` to your `.gitignore`.
+</Warning>
+
+## Configuration Validation
+
+Verify your configuration:
+
+<Steps>
+  <Step title="Check environment variables">
+    ```bash
+    docker-compose config
+    ```
+    
+    This displays the resolved configuration with all environment variables substituted.
+  </Step>
+
+  <Step title="Verify API connectivity">
+    ```bash
+    docker-compose exec api curl http://localhost:8080/actuator/health
+    ```
+  </Step>
+
+  <Step title="Test database connection">
+    ```bash
+    docker-compose exec db psql -U postgres -d easy_act -c "SELECT version();"
+    ```
+  </Step>
+
+  <Step title="Check Nginx configuration">
+    ```bash
+    docker-compose exec web nginx -t
+    ```
+  </Step>
+</Steps>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Docker Compose Guide" icon="docker" href="/deployment/docker-compose">
+    Learn how to deploy with Docker Compose
+  </Card>
+  <Card title="Troubleshooting" icon="wrench" href="/deployment/troubleshooting">
+    Fix common configuration issues
+  </Card>
+</CardGroup>

@@ -1,0 +1,231 @@
+---
+title: 'Categories API'
+description: 'Endpoints for managing transaction categories'
+---
+
+## Overview
+
+The Categories API provides endpoints to manage transaction categories. Categories help organize transactions into logical groups like "Food", "Transportation", "Entertainment", etc. All endpoints are prefixed with `/api/categories`.
+
+## Endpoints
+
+### Get All Categories
+
+Retrieve all category types.
+
+```http
+GET /api/categories
+```
+
+#### Response
+
+Returns an array of category objects.
+
+<ResponseField name="response" type="array">
+  Array of CategoryResponse objects
+  
+  <ResponseField name="id" type="string">
+    Unique identifier for the category (e.g., "FOOD", "TRANSPORT")
+  </ResponseField>
+  
+  <ResponseField name="categoryDescription" type="string">
+    Description of the category (e.g., "Food & Dining", "Transportation")
+  </ResponseField>
+</ResponseField>
+
+#### Example Request
+
+```bash
+curl -X GET http://localhost:8080/api/categories
+```
+
+#### Example Response
+
+```json
+[
+  {
+    "id": "FOOD",
+    "categoryDescription": "Food & Dining"
+  },
+  {
+    "id": "TRANSPORT",
+    "categoryDescription": "Transportation"
+  },
+  {
+    "id": "SALARY",
+    "categoryDescription": "Salary Income"
+  }
+]
+```
+
+---
+
+### Create Category
+
+Create a new category.
+
+```http
+POST /api/categories
+```
+
+#### Request Body
+
+<ParamField body="id" type="string" required>
+  Unique identifier for the category (e.g., "ENTERTAINMENT", "UTILITIES")
+</ParamField>
+
+<ParamField body="categoryDescription" type="string" required>
+  Human-readable description of the category
+</ParamField>
+
+#### Example Request
+
+```bash
+curl -X POST http://localhost:8080/api/categories \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": "ENTERTAINMENT",
+    "categoryDescription": "Entertainment & Recreation"
+  }'
+```
+
+#### Response
+
+```
+200 OK - Category created successfully
+409 CONFLICT - Category ID already exists
+```
+
+---
+
+### Update Category
+
+Update an existing category.
+
+```http
+PUT /api/categories
+```
+
+<Note>
+Note: This endpoint does not use a path parameter. The category ID is provided in the request body.
+</Note>
+
+#### Request Body
+
+<ParamField body="id" type="string" required>
+  The identifier of the category to update
+</ParamField>
+
+<ParamField body="categoryDescription" type="string" required>
+  Updated description for the category
+</ParamField>
+
+#### Example Request
+
+```bash
+curl -X PUT http://localhost:8080/api/categories \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": "FOOD",
+    "categoryDescription": "Food, Dining & Groceries"
+  }'
+```
+
+#### Response
+
+```
+200 OK - Update successful
+404 NOT FOUND - Category not found
+```
+
+---
+
+### Delete Category
+
+Delete a specific category.
+
+```http
+DELETE /api/categories/{id}
+```
+
+#### Path Parameters
+
+<ParamField path="id" type="string" required>
+  The unique identifier of the category to delete
+</ParamField>
+
+#### Example Request
+
+```bash
+curl -X DELETE http://localhost:8080/api/categories/ENTERTAINMENT
+```
+
+#### Response
+
+```
+200 OK - Deletion successful
+404 NOT FOUND - Category not found
+```
+
+<Warning>
+Deleting a category that is referenced by existing account book records may cause integrity constraint violations. Ensure no account books reference this category before deletion.
+</Warning>
+
+---
+
+### Batch Delete Categories
+
+Delete multiple categories at once.
+
+```http
+DELETE /api/categories/batch
+```
+
+#### Request Body
+
+Array of category IDs to delete.
+
+<ParamField body="ids" type="array" required>
+  Array of string values representing category IDs
+</ParamField>
+
+#### Example Request
+
+```bash
+curl -X DELETE http://localhost:8080/api/categories/batch \
+  -H "Content-Type: application/json" \
+  -d '["ENTERTAINMENT", "SHOPPING", "TRAVEL"]'
+```
+
+#### Response
+
+```
+200 OK - Batch deletion successful
+```
+
+## Common Category Types
+
+Typical categories used in personal finance tracking:
+
+### Expense Categories
+
+| ID | Description | Examples |
+|----|-------------|----------|
+| `FOOD` | Food & Dining | Restaurants, groceries, coffee shops |
+| `TRANSPORT` | Transportation | Gas, public transit, parking, car maintenance |
+| `SHOPPING` | Shopping | Clothing, electronics, household items |
+| `ENTERTAINMENT` | Entertainment | Movies, concerts, hobbies, streaming services |
+| `UTILITIES` | Utilities | Electricity, water, internet, phone |
+| `HEALTHCARE` | Healthcare | Doctor visits, medications, insurance |
+| `EDUCATION` | Education | Tuition, books, courses |
+| `HOUSING` | Housing | Rent, mortgage, property taxes |
+
+### Income Categories
+
+| ID | Description | Examples |
+|----|-------------|----------|
+| `SALARY` | Salary Income | Regular employment income |
+| `FREELANCE` | Freelance | Contract work, consulting |
+| `INVESTMENT` | Investment Returns | Dividends, interest, capital gains |
+| `GIFT` | Gifts | Money received as gifts |
+| `BONUS` | Bonuses | Work bonuses, commissions |

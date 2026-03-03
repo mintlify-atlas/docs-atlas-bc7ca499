@@ -1,0 +1,150 @@
+---
+title: Adding Transactions
+description: Learn how to add income and expense transactions to your EasyACT account books
+---
+
+## Overview
+
+EasyACT makes it easy to track your income and expenses. The Add Transaction page allows you to record detailed financial transactions with date, time, category, and description information.
+
+## Adding a New Transaction
+
+<Steps>
+  <Step title="Navigate to Add Transaction Page">
+    Click on the "Add" or "新增帳單記錄" button in the main navigation to access the transaction entry form.
+  </Step>
+
+  <Step title="Select Transaction Date and Time">
+    On the left side of the form, you'll see the **Record Transaction Time** (記錄帳單時間) card:
+    
+    - Use the calendar picker to select the transaction date
+    - Use the time picker to set the exact time (hours, minutes, seconds)
+    - The date format is `YYYY-MM-DD` and time format is `HH:MM:SS`
+    
+    <Tip>
+      The form automatically sets the current date and time when you open the page. You can reset to the current time at any moment.
+    </Tip>
+  </Step>
+
+  <Step title="Choose Action Type">
+    In the **Record Transaction Content** (記錄帳單內容) section, select the action type:
+    
+    - **支出 (Expenses)** - For money spent
+    - **收入 (Income)** - For money received
+    
+    <Warning>
+      This field is required. You'll see an error message if you try to submit without selecting an action type.
+    </Warning>
+  </Step>
+
+  <Step title="Select Category">
+    Choose the appropriate category for your transaction:
+    
+    - **飲食 (Food)** - Meals, groceries, dining
+    - **交通 (Traffic)** - Transportation, fuel, public transit
+    - **娛樂 (Game)** - Entertainment, hobbies, recreation
+    - **其他 (Other)** - Other expenses or income
+    
+    <Note>
+      Categories help you analyze your spending patterns in the analytics view. Choose the most relevant category for accurate reporting.
+    </Note>
+  </Step>
+
+  <Step title="Enter Amount">
+    Input the transaction amount using the currency input field:
+    
+    - The field displays currency in TWD (Taiwan Dollar) format
+    - Use the +/- buttons to increment or decrement the value
+    - Or type the amount directly
+    - Amount must be greater than 0
+    
+    <CodeGroup>
+    ```text Example
+    NT$1,000
+    NT$250
+    NT$15,500
+    ```
+    </CodeGroup>
+  </Step>
+
+  <Step title="Add Description (Optional)">
+    Provide additional context for the transaction in the description field:
+    
+    - Maximum 10 characters
+    - Examples: "搭捷運" (took MRT), "搭公車" (took bus), "中餐" (lunch)
+    - This field is optional but recommended for better record keeping
+  </Step>
+
+  <Step title="Submit or Reset">
+    Two buttons are available at the bottom of the form:
+    
+    - **提交 (Submit)** - Saves the transaction to your account book
+    - **重置 (Reset)** - Clears all fields and resets to current date/time
+    
+    Upon successful submission, you'll see a success toast notification: "提交成功 - 帳單記錄已新增" (Submission successful - Transaction record added).
+  </Step>
+</Steps>
+
+## Form Validation
+
+EasyACT validates your input to ensure data quality:
+
+<AccordionGroup>
+  <Accordion title="Required Fields">
+    - **Action Type**: Must select either Income or Expenses
+    - **Category**: Must select a category
+    - **Amount**: Must be greater than 0
+    
+    Missing any required field will show an error toast with the specific issue.
+  </Accordion>
+
+  <Accordion title="Field Constraints">
+    - **Description**: Maximum 10 characters
+    - **Amount**: Must be a positive number
+    - **Date/Time**: Must be a valid date and time
+  </Accordion>
+
+  <Accordion title="Auto-Creation of Categories and Actions">
+    When you submit a transaction, EasyACT automatically checks if the selected category and action exist in the database. If they don't exist, they are automatically created before saving the transaction record.
+  </Accordion>
+</AccordionGroup>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Record Immediately" icon="clock">
+    Add transactions as soon as they occur for the most accurate date/time stamps and to avoid forgetting details.
+  </Card>
+  
+  <Card title="Use Descriptions" icon="file-text">
+    Even though descriptions are optional, adding them helps you remember what each transaction was for when reviewing later.
+  </Card>
+  
+  <Card title="Choose Accurate Categories" icon="tag">
+    Select the most appropriate category to get meaningful insights from your analytics and reports.
+  </Card>
+  
+  <Card title="Double-Check Amounts" icon="calculator">
+    Always verify the amount before submitting to maintain accurate financial records.
+  </Card>
+</CardGroup>
+
+## Error Messages
+
+Here are common error messages you might encounter:
+
+| Error Message | Cause | Solution |
+|--------------|-------|----------|
+| 請選擇動作 | No action type selected | Select either Income or Expenses |
+| 請選擇類別 | No category selected | Choose a category from the dropdown |
+| 金額需大於 0 | Amount is 0 or negative | Enter a positive amount |
+| 無法新增記錄，請稍後再試 | Server or network error | Check your connection and try again |
+
+## What's Next?
+
+After adding transactions, you can:
+
+- View all transactions in the [Transaction List](/guide/managing-account-books)
+- Analyze your spending patterns in [Analytics](/guide/viewing-analytics)
+- Edit or delete transactions as needed
+- Export reports for further analysis

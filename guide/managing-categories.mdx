@@ -1,0 +1,224 @@
+---
+title: Managing Categories
+description: Create and organize transaction categories to better track your spending and income patterns in EasyACT
+---
+
+## Overview
+
+Categories in EasyACT help you organize your transactions into meaningful groups, making it easier to analyze your spending patterns and financial habits. The application supports both predefined and custom categories.
+
+## Default Categories
+
+EasyACT comes with four built-in categories:
+
+<CardGroup cols={2}>
+  <Card title="飲食 (Food)" icon="utensils" color="#FF6B6B">
+    For meals, groceries, dining out, and food-related expenses
+  </Card>
+  
+  <Card title="交通 (Traffic)" icon="car" color="#4ECDC4">
+    For transportation costs including public transit, fuel, parking, and vehicle maintenance
+  </Card>
+  
+  <Card title="娛樂 (Game)" icon="gamepad" color="#FFE66D">
+    For entertainment expenses like movies, games, hobbies, and recreational activities
+  </Card>
+  
+  <Card title="其他 (Other)" icon="ellipsis" color="#FCBAD3">
+    For miscellaneous expenses that don't fit other categories
+  </Card>
+</CardGroup>
+
+## How Categories Work
+
+Categories in EasyACT are automatically managed through the transaction workflow:
+
+<Steps>
+  <Step title="Category Selection">
+    When adding or editing a transaction, you select a category from the dropdown menu in the form. Each category has:
+    
+    - **Label**: The display name shown in the UI (e.g., "飲食")
+    - **Value**: The internal ID used in the database (e.g., "Food")
+  </Step>
+
+  <Step title="Auto-Creation">
+    When you submit a transaction with a category, EasyACT automatically:
+    
+    1. Checks if the category exists in the database
+    2. If the category doesn't exist, it creates it automatically
+    3. Associates the category with your transaction
+    
+    <Info>
+      This auto-creation feature is handled in `AddView.vue:146-157` and ensures your transactions are never blocked by missing categories.
+    </Info>
+  </Step>
+
+  <Step title="Visual Representation">
+    Each category is assigned a unique color for easy visual identification:
+    
+    - Food: <span style={{color: '#FF6B6B'}}>Red (#FF6B6B)</span>
+    - Traffic: <span style={{color: '#4ECDC4'}}>Teal (#4ECDC4)</span>
+    - Game: <span style={{color: '#FFE66D'}}>Yellow (#FFE66D)</span>
+    - Shopping: <span style={{color: '#95E1D3'}}>Mint (#95E1D3)</span>
+    - Medical: <span style={{color: '#F38181'}}>Pink (#F38181)</span>
+    - Education: <span style={{color: '#AA96DA'}}>Purple (#AA96DA)</span>
+    - Other: <span style={{color: '#FCBAD3'}}>Light Pink (#FCBAD3)</span>
+    
+    These colors appear in the transaction list and analytics charts.
+  </Step>
+</Steps>
+
+## Category Data Structure
+
+Categories are stored with the following structure:
+
+```javascript
+{
+  id: 'Food',                    // Unique identifier
+  categoryDescription: '飲食'     // Display name
+}
+```
+
+This structure is defined in the store at `accountStore.js:114-121`.
+
+## Using Categories Effectively
+
+<AccordionGroup>
+  <Accordion title="Consistent Categorization">
+    Always use the same category for similar types of transactions. For example:
+    - All restaurant meals should use "飲食 (Food)"
+    - All bus/train fares should use "交通 (Traffic)"
+    
+    Consistency helps generate accurate analytics and spending reports.
+  </Accordion>
+
+  <Accordion title="Category in Transaction List">
+    In the transaction list view (`ListView.vue`), categories are displayed with:
+    - A colored dot indicator matching the category color
+    - The category name
+    - Sortable column for easy filtering
+    
+    This makes it easy to quickly scan and identify transaction types.
+  </Accordion>
+
+  <Accordion title="Category in Analytics">
+    The analytics view (`ChartView.vue`) uses categories to:
+    - Generate pie charts showing expense distribution by category
+    - Calculate total spending per category
+    - Identify your highest spending categories
+    
+    Accurate categorization leads to more meaningful insights.
+  </Accordion>
+</AccordionGroup>
+
+## Category API Integration
+
+EasyACT interacts with categories through the following API endpoints:
+
+<CodeGroup>
+```javascript Fetch All Categories
+// Retrieves all categories from the database
+const categories = await store.fetchCategories()
+// GET http://localhost:8080/api/categories
+```
+
+```javascript Add New Category
+// Creates a new category
+const response = await store.addCategory({
+  id: 'Food',
+  categoryDescription: '飲食'
+})
+// POST http://localhost:8080/api/categories
+```
+</CodeGroup>
+
+## Category Selection in Forms
+
+When adding or editing transactions, the category selector appears as a dropdown:
+
+<Frame>
+  <div style={{border: '1px solid #ddd', padding: '16px', borderRadius: '8px'}}>
+    <label style={{display: 'block', marginBottom: '8px'}}>類別</label>
+    <div style={{border: '1px solid #ccc', padding: '8px', borderRadius: '4px', backgroundColor: '#f9f9f9'}}>
+      請選擇類別 ▼
+    </div>
+  </div>
+</Frame>
+
+The dropdown shows all available categories with their display names (labels).
+
+## Category Validation
+
+<Warning>
+  The category field is **required** when creating or editing transactions. If you attempt to submit without selecting a category, you'll see an error:
+  
+  "提交失敗 - 請選擇類別" (Submission failed - Please select a category)
+</Warning>
+
+## Extending Categories
+
+While the current version includes predefined categories, the architecture supports adding custom categories:
+
+<Steps>
+  <Step title="Add to Categories Array">
+    Update the categories array in `AddView.vue` or `EditDialog.vue`:
+    
+    ```javascript
+    const categories = ref([
+      { label: '飲食', value: 'Food' },
+      { label: '交通', value: 'Traffic' },
+      { label: '娛樂', value: 'Game' },
+      { label: '購物', value: 'Shopping' },  // New category
+      { label: '其他', value: 'Other' },
+    ])
+    ```
+  </Step>
+
+  <Step title="Add Color Mapping">
+    Define the category color in `ListView.vue`:
+    
+    ```javascript
+    const categoryColorMap = {
+      飲食: '#FF6B6B',
+      交通: '#4ECDC4',
+      娛樂: '#FFE66D',
+      購物: '#95E1D3',  // New color
+      其他: '#FCBAD3',
+    }
+    ```
+  </Step>
+
+  <Step title="Auto-Creation">
+    The category will be automatically created in the database when first used in a transaction.
+  </Step>
+</Steps>
+
+## Category Analytics
+
+Categories power the analytics features in EasyACT:
+
+- **Pie Charts**: Show percentage breakdown of expenses by category
+- **Spending Summaries**: Total amount spent per category
+- **Trend Analysis**: Track category spending over time
+
+See the [Viewing Analytics](/guide/viewing-analytics) guide for more details on using category-based reports.
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Be Specific" icon="bullseye">
+    Choose the most specific category available. Use "Other" only when no other category fits.
+  </Card>
+  
+  <Card title="Stay Consistent" icon="repeat">
+    Use the same category for the same type of expense every time for accurate analytics.
+  </Card>
+  
+  <Card title="Review Regularly" icon="chart-line">
+    Check your category distribution in analytics to ensure your categorization makes sense.
+  </Card>
+  
+  <Card title="Don't Over-Categorize" icon="filter">
+    Too many categories can make analysis confusing. Stick to broad, meaningful groups.
+  </Card>
+</CardGroup>

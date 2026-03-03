@@ -1,0 +1,277 @@
+---
+title: Data Visualization
+description: Analyze your finances with interactive charts and visual reports in EasyACT
+---
+
+## Overview
+
+EasyACT transforms your transaction data into meaningful insights through powerful visualization tools. The application uses Chart.js to create interactive, responsive charts that help you understand your spending patterns and financial trends.
+
+## Financial Overview Dashboard
+
+The dashboard provides an at-a-glance summary of your monthly finances:
+
+<CardGroup cols={3}>
+  <Card title="Total Income" icon="trending-up">
+    Displays the sum of all income transactions for the selected month with a blue trending-up icon.
+  </Card>
+  
+  <Card title="Total Expenses" icon="trending-down">
+    Shows your total spending for the month with a red trending-down icon for quick identification.
+  </Card>
+  
+  <Card title="Net Balance" icon="bank">
+    Calculates your savings (income minus expenses) with a green account balance icon.
+  </Card>
+</CardGroup>
+
+### Overview Features
+
+- **Animated Numbers**: Values are displayed with smooth number animations for visual appeal
+- **Currency Formatting**: All amounts are formatted with thousand separators (`$X,XXX`)
+- **Color-Coded Icons**: Each metric has a distinctive background color matching its purpose
+- **Real-time Updates**: Overview cards refresh automatically when new transactions are added
+
+<Tip>
+  The overview section automatically recalculates when you change the selected month using the date picker.
+</Tip>
+
+## Category Breakdown Chart
+
+The category analysis section provides deep insights into your spending distribution:
+
+### Interactive Doughnut Chart
+
+<Steps>
+  <Step title="Visual Distribution">
+    A doughnut chart displays the proportion of expenses across different categories using distinct colors.
+  </Step>
+  
+  <Step title="Data Labels">
+    Each segment shows the exact amount in TWD, making it easy to see spending at a glance.
+  </Step>
+  
+  <Step title="Interactive Tooltips">
+    Hover over segments to see detailed information including category name and amount.
+  </Step>
+  
+  <Step title="Responsive Legend">
+    The legend appears at the top of the chart, showing all categories with their corresponding colors.
+  </Step>
+</Steps>
+
+### Chart Configuration
+
+```javascript
+const chartOptions = {
+  responsive: true,
+  plugins: {
+    legend: {
+      position: 'top',
+    },
+    tooltip: {
+      callbacks: {
+        title: (context) => `${context[0].label}`,
+        label: (context) => ` ${context.parsed}元`,
+      },
+    },
+    datalabels: {
+      color: 'black',
+      font: {
+        weight: 'bold',
+        size: 16,
+      },
+      formatter: (value) => value + '元',
+    },
+  },
+}
+```
+
+### Detailed Breakdown Table
+
+Accompanying the pie chart, a detailed table shows:
+
+- **Category**: Name with color-coded indicator dot
+- **Amount**: Transaction amount in currency format
+- **Description**: Transaction notes and details
+- **Date**: Day of the month when the expense occurred
+
+<Note>
+  The table is scrollable (up to 400px height) and supports sorting by category, amount, or date.
+</Note>
+
+**Total Summary**: At the bottom of the table, a bold red total shows your combined expenses for all categories.
+
+## Annual Income & Expense Trend
+
+The liner chart provides a comprehensive year-over-year financial analysis:
+
+### Multi-Dataset Visualization
+
+The chart combines three data types in one view:
+
+<CardGroup cols={3}>
+  <Card title="Income Bars" icon="chart-column">
+    Blue bars represent monthly income, showing revenue patterns throughout the year.
+  </Card>
+  
+  <Card title="Expense Bars" icon="chart-column">
+    Red bars display monthly expenses, helping identify high-spending months.
+  </Card>
+  
+  <Card title="Savings Line" icon="chart-line">
+    Green line tracks net savings (income - expenses), revealing saving trends.
+  </Card>
+</CardGroup>
+
+### Chart Features
+
+**Interactive Elements:**
+- Hover over any month to see detailed breakdown of income, expenses, and savings
+- Click legend items to show/hide specific datasets
+- Smooth line tension (0.4) for the savings trend line
+
+**Visual Design:**
+- Semi-transparent bar colors for better overlapping visibility
+- Rounded bar corners (5px border radius) for modern aesthetics
+- Optimized bar width (70% bar percentage) for readability
+
+**Data Representation:**
+
+```javascript
+const chartData = {
+  labels: ['1月', '2月', '3月', '4月', '5月', '6月', 
+           '7月', '8月', '9月', '10月', '11月', '12月'],
+  datasets: [
+    {
+      type: 'line',
+      label: '儲蓄',
+      data: savingsData,
+      borderColor: '#66BB6A',
+      backgroundColor: '#66BB6A',
+      fill: false,
+      tension: 0.4,
+    },
+    {
+      label: '收入',
+      data: incomeData,
+      backgroundColor: 'rgba(86, 170, 245, 0.55)',
+    },
+    {
+      label: '支出',
+      data: expensesData,
+      backgroundColor: 'rgba(245, 86, 86, 0.55)',
+    },
+  ],
+}
+```
+
+<Tip>
+  Use the year selector to view trends for different years and compare financial performance over time.
+</Tip>
+
+## Recent Transactions Widget
+
+Quickly view your most recent financial activity:
+
+- Displays the latest transactions sorted by date (newest first)
+- Includes transaction type, category, amount, and timestamp
+- Provides one-click navigation to full transaction details
+- Auto-refreshes to show newly added transactions
+
+## Month Selection
+
+Control the time period for all visualizations:
+
+<Steps>
+  <Step title="Date Picker">
+    Click the month picker in the top navigation to open the calendar.
+  </Step>
+  
+  <Step title="Choose Month">
+    Select any month/year combination to filter your data.
+  </Step>
+  
+  <Step title="Auto-Update">
+    All charts and summaries automatically recalculate for the selected period.
+  </Step>
+  
+  <Step title="Persistent Selection">
+    Your selected month persists while navigating the charts page.
+  </Step>
+</Steps>
+
+## Loading States
+
+EasyACT provides smooth loading experiences:
+
+**Skeleton Screens**: While data loads, skeleton placeholders appear:
+- Circle skeleton for doughnut chart
+- Rectangle skeletons for tables and cards
+- Height-matched skeletons maintain layout stability
+
+**Empty States**: When no data exists for a period:
+- "No Record" component displays with helpful messaging
+- Encourages users to add transactions
+- Maintains visual consistency with the rest of the interface
+
+<Warning>
+  Charts require at least one transaction in the selected period to display. If you see empty states, try selecting a different month or adding transactions.
+</Warning>
+
+## Responsive Design
+
+All visualizations adapt to different screen sizes:
+
+| Screen Size | Layout Adaptation |
+|-------------|------------------|
+| Mobile (< 768px) | Charts stack vertically, legend positions adjust |
+| Tablet (768px - 1024px) | Two-column grid for category breakdown |
+| Desktop (> 1024px) | Three-column grid with sidebar for recent transactions |
+
+## Auto-Refresh Mechanism
+
+Charts stay up-to-date automatically:
+
+```javascript
+onMounted(async () => {
+  await store.fetchAccountBooks()
+  handleDateChange(date.value)
+  
+  timer = setInterval(async () => {
+    await store.fetchAccountBooks()
+    console.log('Data refreshed')
+  }, 60000) // Refresh every 60 seconds
+})
+```
+
+<Note>
+  Data refreshes every 60 seconds while you're viewing the charts page, ensuring you always see the latest information without manual reloading.
+</Note>
+
+## Export Capabilities
+
+While the export button is currently commented out in the interface, the infrastructure supports future report export features for:
+- PDF financial reports
+- CSV data exports
+- Printable monthly summaries
+
+## Best Practices for Data Analysis
+
+<CardGroup cols={2}>
+  <Card title="Regular Review" icon="calendar-check">
+    Check your charts weekly or monthly to stay aware of spending trends.
+  </Card>
+  
+  <Card title="Compare Periods" icon="arrow-right-arrow-left">
+    Use the month selector to compare different periods and identify patterns.
+  </Card>
+  
+  <Card title="Category Focus" icon="bullseye">
+    Pay attention to the largest slices in your category breakdown to find optimization opportunities.
+  </Card>
+  
+  <Card title="Savings Trends" icon="piggy-bank">
+    Monitor the savings line chart to ensure you're maintaining positive net balances.
+  </Card>
+</CardGroup>

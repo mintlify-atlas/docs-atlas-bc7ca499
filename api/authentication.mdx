@@ -1,0 +1,87 @@
+---
+title: 'Authentication'
+description: 'Authentication and authorization details for the EasyACT API'
+---
+
+## Current Authentication Status
+
+The EasyACT API currently **does not require authentication**. All endpoints are publicly accessible.
+
+## CORS Configuration
+
+All controllers are annotated with `@CrossOrigin`, which allows cross-origin requests from any origin. This configuration is present on:
+
+- `AccountBookController`
+- `ActionController`
+- `CategoryController`
+- `HealthController`
+
+### Example CORS Headers
+
+When making requests from a web browser, the API will automatically include appropriate CORS headers in responses:
+
+```
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS
+Access-Control-Allow-Headers: *
+```
+
+## Making API Requests
+
+Since no authentication is required, you can make direct requests to any endpoint:
+
+```bash
+curl -X GET http://localhost:8080/api/account-books
+```
+
+### With Request Body
+
+For POST and PUT requests, include the `Content-Type` header:
+
+```bash
+curl -X POST http://localhost:8080/api/account-books \
+  -H "Content-Type: application/json" \
+  -d '{
+    "date": "2026-03-03T10:00:00",
+    "amount": 1000.00,
+    "description": "Salary",
+    "actionId": "IN",
+    "categoryId": "SALARY"
+  }'
+```
+
+## Security Considerations
+
+<Warning>
+The current configuration with no authentication and unrestricted CORS is suitable for **development and testing environments only**. For production deployments, consider implementing:
+
+- Authentication (JWT, OAuth2, or API keys)
+- Authorization with role-based access control
+- Restricted CORS to specific trusted origins
+- HTTPS/TLS encryption
+- Rate limiting
+</Warning>
+
+## Future Authentication Plans
+
+For production use, we recommend implementing one of the following authentication strategies:
+
+### JWT (JSON Web Tokens)
+
+```bash
+# Login to get token
+curl -X POST http://localhost:8080/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username": "user", "password": "pass"}'
+
+# Use token in subsequent requests
+curl -X GET http://localhost:8080/api/account-books \
+  -H "Authorization: Bearer <token>"
+```
+
+### API Keys
+
+```bash
+curl -X GET http://localhost:8080/api/account-books \
+  -H "X-API-Key: your-api-key-here"
+```

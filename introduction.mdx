@@ -1,0 +1,121 @@
+---
+title: Welcome to EasyACT
+description: A personal finance tracking web application designed to help you manage your daily income and expenses with intuitive interfaces and visual analytics.
+---
+
+# Welcome to EasyACT
+
+EasyACT is a personal finance tracking web application designed to help you manage your daily income and expenses with intuitive interfaces and visual analytics. Take control of your financial goals with easy-to-use tools for recording transactions and analyzing your spending patterns.
+
+<CardGroup cols={2}>
+  <Card
+    title="Quick Start"
+    icon="rocket"
+    href="/quickstart"
+  >
+    Get started in minutes - from installation to your first transaction
+  </Card>
+  <Card
+    title="Installation Guide"
+    icon="docker"
+    href="/installation"
+  >
+    Deploy EasyACT using Docker Compose in just a few commands
+  </Card>
+  <Card
+    title="API Documentation"
+    icon="code"
+    href="http://localhost:8080/swagger-ui.html"
+  >
+    Explore the complete REST API with Swagger UI
+  </Card>
+  <Card
+    title="GitHub Repository"
+    icon="github"
+    href="https://github.com/RL-Small-Project/EasyACT"
+  >
+    View source code, report issues, and contribute
+  </Card>
+</CardGroup>
+
+## Key Features
+
+<CardGroup cols={3}>
+  <Card title="Easy Transaction Recording" icon="wallet">
+    Quickly add income and expense records with custom category management
+  </Card>
+  <Card title="Visual Analytics" icon="chart-line">
+    View your financial trends and category breakdowns with interactive charts
+  </Card>
+  <Card title="Multiple Accounts" icon="book">
+    Manage different accounts for flexible fund tracking across various purposes
+  </Card>
+</CardGroup>
+
+## Technology Stack
+
+EasyACT is built with modern, production-ready technologies:
+
+### Frontend
+
+- **Vue 3** (3.5.25) - Progressive JavaScript framework
+- **PrimeVue** (4.5.3) - Rich UI component library
+- **Tailwind CSS** (4.1.18) - Utility-first CSS framework
+- **Chart.js** (4.5.1) - Interactive data visualization
+- **Pinia** (3.0.4) - State management
+- **Vite** (7.2.4) - Next-generation build tool
+
+### Backend
+
+- **Spring Boot** (4.0.1) - Enterprise Java framework
+- **Java 25** - Latest Java runtime
+- **Spring Data JPA** - Object-relational mapping
+- **SpringDoc OpenAPI** (2.6.0) - Automatic API documentation
+
+### Database
+
+- **PostgreSQL 15** - Robust relational database
+
+## Architecture Overview
+
+EasyACT uses a containerized microservices architecture for easy deployment and scalability:
+
+```
+┌─────────────┐      ┌─────────────┐      ┌─────────────┐
+│             │      │             │      │             │
+│   Web UI    │─────▶│   API       │─────▶│  Database   │
+│  (Vue.js)   │      │ (Spring     │      │ (PostgreSQL)│
+│   Nginx     │      │  Boot)      │      │             │
+│             │      │             │      │             │
+└─────────────┘      └─────────────┘      └─────────────┘
+   Port: 8000           Port: 8080          Port: 5432
+```
+
+<Note>
+All three services run in Docker containers and communicate through a bridge network, making deployment simple and consistent across environments.
+</Note>
+
+## What's Next?
+
+<Steps>
+  <Step title="Install EasyACT">
+    Follow our [installation guide](/installation) to deploy EasyACT using Docker Compose
+  </Step>
+  <Step title="Record Your First Transaction">
+    Check out the [quick start guide](/quickstart) to learn the basics
+  </Step>
+  <Step title="Explore Analytics">
+    View your spending patterns with visual charts and track your financial goals
+  </Step>
+</Steps>
+
+## Community & Support
+
+<CardGroup cols={2}>
+  <Card title="Report Issues" icon="bug" href="https://github.com/RL-Small-Project/EasyACT/issues">
+    Found a bug? Let us know by creating an issue on GitHub
+  </Card>
+  <Card title="Contribute" icon="code-branch" href="https://github.com/RL-Small-Project/EasyACT">
+    Contributions are welcome! Check out the repository to get started
+  </Card>
+</CardGroup>

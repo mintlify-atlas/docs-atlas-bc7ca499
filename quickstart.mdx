@@ -1,80 +1,223 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quick Start Guide
+description: Get up and running with EasyACT in minutes - from installation to recording your first transaction.
 ---
 
-## Get started in three steps
+# Quick Start Guide
 
-Get your documentation site running locally and make your first customization.
+This guide will help you get EasyACT running and record your first transaction in just a few minutes.
 
-### Step 1: Set up your local environment
+## Prerequisites
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
+Before you begin, ensure you have the following installed:
 
-### Step 2: Deploy your changes
-
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
-
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
-
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 3: Go live
-
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
-
-## Next steps
-
-Now that you have your docs running, explore these key features:
-
-<CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
-</CardGroup>
+- [Docker](https://www.docker.com/) (version 20.10 or later)
+- [Docker Compose](https://docs.docker.com/compose/) (version 2.0 or later)
+- Git (for cloning the repository)
 
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+Docker Desktop includes Docker Compose, so if you have Docker Desktop installed, you're all set!
+</Note>
+
+## Installation Steps
+
+<Steps>
+  <Step title="Clone the Repository">
+    Open your terminal and clone the EasyACT repository:
+
+    ```bash
+    git clone https://github.com/RL-Small-Project/EasyACT.git
+    cd EasyACT
+    ```
+  </Step>
+
+  <Step title="Start the Services">
+    Launch all services with Docker Compose:
+
+    ```bash
+    docker-compose up -d
+    ```
+
+    This command will:
+    - Build the frontend and backend containers
+    - Pull the PostgreSQL 15 database image
+    - Start all three services in the background
+
+    <Note>
+    The first build may take a few minutes as Docker downloads base images and builds your application.
+    </Note>
+  </Step>
+
+  <Step title="Verify the Services">
+    Check that all containers are running:
+
+    ```bash
+    docker-compose ps
+    ```
+
+    You should see three services running:
+    - `easy_act-web` on port 8000
+    - `easy_act-api` on port 8080
+    - `easy_act-db` on port 5432
+  </Step>
+
+  <Step title="Access the Application">
+    Open your web browser and navigate to:
+
+    ```
+    http://localhost:8000
+    ```
+
+    You should see the EasyACT dashboard!
+  </Step>
+</Steps>
+
+## Recording Your First Transaction
+
+Now that EasyACT is running, let's record your first transaction:
+
+<Steps>
+  <Step title="Navigate to Add Transaction">
+    From the dashboard, click on the **Add** or **New Transaction** button to open the transaction form.
+  </Step>
+
+  <Step title="Fill in Transaction Details">
+    Enter the following information:
+    - **Type**: Choose Income or Expense
+    - **Amount**: Enter the transaction amount
+    - **Category**: Select or create a category (e.g., "Groceries", "Salary", "Transportation")
+    - **Date**: Select the transaction date
+    - **Description**: (Optional) Add notes about the transaction
+  </Step>
+
+  <Step title="Save the Transaction">
+    Click **Save** or **Submit** to record your transaction.
+
+    <Note>
+    Your transaction is now saved in the PostgreSQL database and will appear in your transaction list and analytics.
+    </Note>
+  </Step>
+
+  <Step title="View Your Transaction">
+    Navigate to the **List View** to see all your transactions, or check the **Chart View** to see visual analytics of your spending patterns.
+  </Step>
+</Steps>
+
+## Understanding the Interface
+
+### Main Views
+
+<CardGroup cols={2}>
+  <Card title="Chart View" icon="chart-pie">
+    Visualize your income and expenses with interactive charts showing trends and category breakdowns
+  </Card>
+  <Card title="List View" icon="list">
+    See all transactions in a searchable, sortable table with edit and delete capabilities
+  </Card>
+  <Card title="Add View" icon="plus">
+    Quick form to add new income or expense transactions
+  </Card>
+  <Card title="Account Management" icon="wallet">
+    Create and manage multiple accounts for different purposes
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Explore Analytics" icon="chart-line">
+    Head to the Chart View to see your spending patterns visualized with Chart.js powered graphics
+  </Card>
+  <Card title="Manage Categories" icon="tags">
+    Create custom categories to organize your transactions the way you want
+  </Card>
+  <Card title="API Documentation" icon="code" href="http://localhost:8080/swagger-ui.html">
+    Explore the REST API with interactive Swagger documentation
+  </Card>
+  <Card title="Multiple Accounts" icon="book">
+    Set up different accounts to track personal, business, or savings separately
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Container fails to start">
+    Check the logs for the specific container:
+
+    ```bash
+    docker-compose logs web
+    docker-compose logs api
+    docker-compose logs db
+    ```
+
+    Common issues:
+    - Port conflicts: Ensure ports 8000, 8080, and 5432 are not in use
+    - Insufficient resources: Docker needs adequate memory and CPU allocation
+  </Accordion>
+
+  <Accordion title="Cannot connect to the database">
+    Verify the database container is running:
+
+    ```bash
+    docker-compose ps db
+    ```
+
+    If it's not running, restart the services:
+
+    ```bash
+    docker-compose restart
+    ```
+  </Accordion>
+
+  <Accordion title="Frontend shows API errors">
+    Ensure the API service is healthy:
+
+    ```bash
+    curl http://localhost:8080/swagger-ui.html
+    ```
+
+    Check API logs:
+
+    ```bash
+    docker-compose logs api
+    ```
+  </Accordion>
+
+  <Accordion title="Need to reset everything">
+    Stop and remove all containers, networks, and volumes:
+
+    ```bash
+    docker-compose down -v
+    ```
+
+    <Warning>
+    This will delete all your data! Only use this if you want to start fresh.
+    </Warning>
+
+    Then start again:
+
+    ```bash
+    docker-compose up -d
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Stopping EasyACT
+
+When you're done using EasyACT:
+
+```bash
+# Stop containers but keep data
+docker-compose stop
+
+# Stop and remove containers (data persists)
+docker-compose down
+
+# Stop and remove everything including data
+docker-compose down -v
+```
+
+<Note>
+Your transaction data is stored in the `./data` directory and will persist even after stopping containers, unless you use the `-v` flag.
 </Note>

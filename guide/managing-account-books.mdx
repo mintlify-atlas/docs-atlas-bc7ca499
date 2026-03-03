@@ -1,0 +1,396 @@
+---
+title: Managing Account Books
+description: View, edit, delete, and organize your transaction records in EasyACT
+---
+
+## Overview
+
+The Account Books (Transaction List) page provides a comprehensive view of all your financial transactions. You can view, search, sort, edit, and delete records from this centralized interface.
+
+## Accessing the Transaction List
+
+Navigate to the Transaction List by clicking on "List" or "交易清單記錄" in the main navigation menu. This page displays all your account book records in a sortable, searchable data table.
+
+## Transaction List Interface
+
+The transaction list is displayed using an interactive data table with the following features:
+
+### Table Columns
+
+<CardGroup cols={2}>
+  <Card title="動作 (Action)" icon="exchange">
+    Shows whether the transaction is:
+    - **支出 (Expenses)** - Displayed with a red danger tag
+    - **收入 (Income)** - Displayed with a green success tag
+  </Card>
+  
+  <Card title="類別 (Category)" icon="tag">
+    Displays the transaction category with a colored dot indicator matching the category color (Food, Traffic, Game, Other, etc.)
+  </Card>
+  
+  <Card title="金額 (Amount)" icon="dollar-sign">
+    Shows the transaction amount formatted with thousand separators (e.g., $1,000, $250)
+  </Card>
+  
+  <Card title="說明 (Description)" icon="file-text">
+    Displays the optional description you added when creating the transaction
+  </Card>
+</CardGroup>
+
+<CardGroup cols={2}>
+  <Card title="交易日期 (Transaction Date)" icon="calendar">
+    Shows the date portion of the transaction (YYYY-MM-DD format)
+  </Card>
+  
+  <Card title="Actions" icon="pencil">
+    Provides an edit button (pencil icon) to modify the transaction record
+  </Card>
+</CardGroup>
+
+## Viewing Transactions
+
+<Steps>
+  <Step title="Load the Page">
+    When you open the Transaction List page, it automatically:
+    - Fetches all account book records from the database
+    - Sorts them by date in descending order (newest first)
+    - Displays them in the data table
+    
+    This initial data fetch is handled in `ListView.vue:93-94`.
+  </Step>
+
+  <Step title="Browse Records">
+    The table provides several viewing features:
+    
+    - **Scrollable view**: The table has a maximum height of 80vh with vertical scrolling
+    - **Resizable columns**: Drag column borders to adjust widths
+    - **Sortable columns**: Click column headers to sort by that field
+    - **Visual indicators**: Color-coded tags and dots for quick identification
+  </Step>
+
+  <Step title="Auto-Refresh">
+    The page automatically refreshes data every 60 seconds to keep your view current.
+    
+    <Info>
+      You'll see a "Data refreshed" message in the console every minute when new data is fetched.
+    </Info>
+  </Step>
+</Steps>
+
+## Sorting Transactions
+
+Click on any column header marked as sortable to sort the table:
+
+- **First click**: Sort ascending
+- **Second click**: Sort descending  
+- **Third click**: Remove sort (return to default date sorting)
+
+<Tip>
+  Sortable columns include: Action (動作), Category (類別), Amount (金額), and Transaction Date (交易日期).
+</Tip>
+
+## Selecting Transactions
+
+You can select multiple transactions for batch operations:
+
+<Steps>
+  <Step title="Select Individual Records">
+    Click the checkbox in the leftmost column of any row to select that transaction.
+  </Step>
+
+  <Step title="Select All Records">
+    Click the checkbox in the header row to select all visible transactions.
+  </Step>
+
+  <Step title="View Selection Count">
+    When you have records selected, a delete button appears in the top-right with a badge showing the number of selected items.
+  </Step>
+</Steps>
+
+## Editing Transactions
+
+<Steps>
+  <Step title="Open Edit Dialog">
+    Click the pencil icon (edit button) in the rightmost column of the transaction you want to modify.
+    
+    The edit button has a tooltip that appears after 500ms hover: "編輯" (Edit).
+  </Step>
+
+  <Step title="Modify Fields">
+    The Edit Dialog appears as a modal window with two sections:
+    
+    **Transaction Time (帳單時間):**
+    - Date picker to change the transaction date
+    - Time picker to adjust the time (hours, minutes, seconds)
+    
+    **Transaction Content (帳單內容):**
+    - Action dropdown (Income/Expenses)
+    - Category dropdown (Food, Traffic, Game, Other)
+    - Amount input with currency formatting
+    - Description text field (optional, max 10 characters)
+  </Step>
+
+  <Step title="Submit Changes">
+    Click the **提交 (Submit)** button to save your changes.
+    
+    The dialog validates:
+    - Action type is selected
+    - Category is selected
+    - Amount is greater than 0
+    
+    <Warning>
+      All validation rules from the add transaction form also apply when editing.
+    </Warning>
+  </Step>
+
+  <Step title="Confirmation">
+    Upon successful update:
+    - The dialog closes automatically
+    - Transaction list refreshes with updated data
+    - Success toast appears: "修改成功 - 帳單記錄已修改" (Modification successful)
+    
+    If the update fails, an error toast displays: "修改失敗 - 無法修改記錄，請稍後再試"
+  </Step>
+</Steps>
+
+### Edit Dialog Implementation
+
+The edit functionality is implemented in `EditDialog.vue` and uses:
+
+<CodeGroup>
+```javascript Watch for Record Changes
+// Automatically populates form when a record is selected
+watch(
+  () => props.record,
+  (newRecord) => {
+    if (newRecord) {
+      formData.date = `${newRecord.date.split('T')[0]} ${newRecord.date.split('T')[1]}`
+      formData.amount = newRecord.amount
+      formData.description = newRecord.description
+      formData.action = newRecord.action
+      formData.category = newRecord.category
+      
+      const [datePart, timePart] = newRecord.date.split('T')
+      date.value = new Date(datePart)
+      time.value = timePart
+    }
+  },
+  { immediate: true }
+)
+```
+
+```javascript Update Record
+// Submits the updated record to the API
+const response = await store.updateAccountBook(props.record.id, {
+  date: date_split[0] + 'T' + date_split[1],
+  amount: formData.amount,
+  description: formData.description,
+  actionId: actions.value.find((a) => a.label === formData.action).value,
+  categoryId: categories.value.find((c) => c.label === formData.category).value,
+})
+```
+</CodeGroup>
+
+## Deleting Transactions
+
+<Steps>
+  <Step title="Select Records to Delete">
+    Use the checkboxes to select one or more transactions you want to delete.
+    
+    A delete button with a trash icon appears in the top-right corner with a badge showing how many records are selected.
+  </Step>
+
+  <Step title="Initiate Batch Delete">
+    Click the delete button (trash icon). If no records are selected, you'll see a warning:
+    
+    "未選擇記錄 - 請先選擇要刪除的記錄" (No records selected - Please select records to delete first)
+  </Step>
+
+  <Step title="Confirm Deletion">
+    A confirmation dialog appears asking:
+    
+    "確定要刪除 X 筆記錄嗎？" (Are you sure you want to delete X records?)
+    
+    - Click **確定 (Confirm)** to proceed with deletion
+    - Click **取消 (Cancel)** to abort
+    
+    <Warning>
+      Deletion is permanent and cannot be undone. Make sure you've selected the correct records.
+    </Warning>
+  </Step>
+
+  <Step title="Delete Confirmation">
+    If deletion succeeds:
+    - Success toast: "刪除成功 - 已刪除 X 筆記錄"
+    - Selected records are cleared
+    - Transaction list refreshes automatically
+    
+    If deletion fails:
+    - Error toast: "刪除失敗 - 無法刪除記錄，請稍後再試"
+  </Step>
+</Steps>
+
+### Batch Delete Implementation
+
+The batch delete feature is implemented in `ListView.vue:44-84`:
+
+<CodeGroup>
+```javascript Batch Delete Handler
+const handleBatchDelete = () => {
+  if (selectedRecords.value.length === 0) {
+    toast.add({
+      severity: 'warn',
+      summary: '未選擇記錄',
+      detail: '請先選擇要刪除的記錄',
+      life: 3000,
+    })
+    return
+  }
+  
+  confirm.require({
+    message: `確定要刪除 ${selectedRecords.value.length} 筆記錄嗎？`,
+    header: '確認刪除',
+    icon: 'pi pi-exclamation-triangle',
+    acceptLabel: '確定',
+    rejectLabel: '取消',
+    accept: async () => {
+      const ids = selectedRecords.value.map((record) => record.id)
+      const success = await store.deleteAccountBooks(ids)
+      // ... handle success/error
+    },
+  })
+}
+```
+</CodeGroup>
+
+## Category Color Coding
+
+The transaction list uses a color-coded system to help you quickly identify categories:
+
+```javascript
+const categoryColorMap = {
+  飲食: '#FF6B6B',      // Red
+  交通: '#4ECDC4',      // Teal
+  娛樂: '#FFE66D',      // Yellow
+  購物: '#95E1D3',      // Mint
+  醫療: '#F38181',      // Pink
+  教育: '#AA96DA',      // Purple
+  其他: '#FCBAD3',      // Light Pink
+}
+```
+
+Each category displays with a colored dot matching its assigned color in `ListView.vue:30-38`.
+
+## Table Features
+
+<AccordionGroup>
+  <Accordion title="Responsive Layout">
+    The table adapts to different screen sizes with:
+    - Horizontal scrolling on smaller screens
+    - Responsive column widths
+    - Touch-friendly interaction on mobile devices
+  </Accordion>
+
+  <Accordion title="Virtual Scrolling">
+    For performance with large datasets, the table uses virtual scrolling:
+    - Only renders visible rows
+    - Item size: 50 pixels
+    - Smooth scrolling up to 80vh height
+    
+    Configuration: `virtualScrollerOptions="{ itemSize: 50 }"`
+  </Accordion>
+
+  <Accordion title="Column Resizing">
+    You can resize columns by dragging the column borders:
+    - Mode: fit (columns adjust to content)
+    - Preserves user preferences during session
+    - Double-click border to auto-fit
+  </Accordion>
+
+  <Accordion title="Loading States">
+    While fetching data, the table shows a loading indicator:
+    - Controlled by `store.isLoading` state
+    - Prevents interaction during data fetch
+    - Automatically clears when data is ready
+  </Accordion>
+</AccordionGroup>
+
+## API Integration
+
+The transaction list interacts with the backend through the following store methods:
+
+<CodeGroup>
+```javascript Fetch All Records
+// Retrieves all account book records
+await store.fetchAccountBooks()
+// GET http://localhost:8080/api/account-books
+```
+
+```javascript Update Record
+// Updates a specific record by ID
+await store.updateAccountBook(id, recordData)
+// PUT http://localhost:8080/api/account-books/{id}
+```
+
+```javascript Delete Records
+// Batch delete by IDs
+await store.deleteAccountBooks([id1, id2, id3])
+// DELETE http://localhost:8080/api/account-books/batch
+```
+</CodeGroup>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Regular Reviews" icon="eye">
+    Review your transaction list regularly to catch errors, duplicates, or missing entries.
+  </Card>
+  
+  <Card title="Use Sorting" icon="arrow-down-wide-short">
+    Sort by different columns to find specific transactions quickly (e.g., sort by amount to find large expenses).
+  </Card>
+  
+  <Card title="Careful Deletion" icon="triangle-exclamation">
+    Always verify your selection before confirming batch deletes - deletion is permanent.
+  </Card>
+  
+  <Card title="Edit vs. Delete" icon="edit">
+    If a transaction has incorrect details, use the edit function rather than deleting and re-creating.
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Table Not Loading">
+    If the transaction list doesn't load:
+    - Check your network connection
+    - Verify the backend server is running at `http://localhost:8080`
+    - Check browser console for error messages
+    - Refresh the page to retry fetching data
+  </Accordion>
+
+  <Accordion title="Edit Dialog Not Opening">
+    If the edit dialog doesn't appear:
+    - Ensure you're clicking the pencil icon in the actions column
+    - Check for JavaScript errors in browser console
+    - Try refreshing the page
+  </Accordion>
+
+  <Accordion title="Batch Delete Not Working">
+    If batch delete fails:
+    - Verify you have records selected (checkboxes checked)
+    - Ensure backend server is running
+    - Check if records are locked or in use
+    - Try deleting fewer records at once
+  </Accordion>
+</AccordionGroup>
+
+## What's Next?
+
+After managing your account books:
+
+- [View analytics](/guide/viewing-analytics) to analyze your spending patterns
+- [Add new transactions](/guide/adding-transactions) to keep your records current
+- [Manage categories](/guide/managing-categories) to improve organization
+- Export your data for external analysis (if available)

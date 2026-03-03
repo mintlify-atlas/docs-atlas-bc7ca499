@@ -1,0 +1,325 @@
+---
+title: Backend Development Setup
+description: Set up your local development environment for the EasyACT Spring Boot backend
+---
+
+## Overview
+
+The EasyACT backend is built with Spring Boot 4.0.1 and Java 25, using PostgreSQL as the database. This guide will help you set up your local development environment.
+
+## Prerequisites
+
+Before you begin, ensure you have the following installed:
+
+<CardGroup cols={2}>
+  <Card title="Java 25" icon="coffee">
+    Download from [Oracle](https://www.oracle.com/java/technologies/downloads/) or use [SDKMAN](https://sdkman.io/)
+  </Card>
+  <Card title="Maven 3.6+" icon="box">
+    Required for dependency management and building the project
+  </Card>
+  <Card title="PostgreSQL 14+" icon="database">
+    For local database development
+  </Card>
+  <Card title="Docker (Optional)" icon="docker">
+    For containerized database setup
+  </Card>
+</CardGroup>
+
+## Installation Steps
+
+<Steps>
+  <Step title="Clone the Repository">
+    Clone the EasyACT repository and navigate to the API directory:
+    
+    ```bash
+    git clone <repository-url>
+    cd source/api
+    ```
+  </Step>
+
+  <Step title="Verify Java Version">
+    Ensure you have Java 25 installed:
+    
+    ```bash
+    java -version
+    ```
+    
+    The output should show Java version 25.
+  </Step>
+
+  <Step title="Install Dependencies">
+    Install all Maven dependencies:
+    
+    ```bash
+    mvn clean install
+    ```
+    
+    This will download all dependencies defined in `pom.xml`:
+    
+    <Accordion title="View Key Dependencies">
+      - **Spring Boot Starter Web MVC** - RESTful API framework
+      - **Spring Boot Starter Data JPA** - Database ORM layer
+      - **PostgreSQL Driver** - Database connectivity
+      - **Lombok** - Reduces boilerplate code
+      - **SpringDoc OpenAPI** - Swagger UI documentation
+    </Accordion>
+  </Step>
+
+  <Step title="Configure Database">
+    Set up your PostgreSQL database. You can either:
+    
+    <Tabs>
+      <Tab title="Using Docker">
+        Start PostgreSQL using Docker Compose (if available in the project):
+        
+        ```bash
+        docker-compose up -d db
+        ```
+      </Tab>
+      
+      <Tab title="Local PostgreSQL">
+        Create the database manually:
+        
+        ```sql
+        CREATE DATABASE easy_act;
+        CREATE USER postgres WITH PASSWORD 'postgres_password';
+        GRANT ALL PRIVILEGES ON DATABASE easy_act TO postgres;
+        ```
+      </Tab>
+    </Tabs>
+    
+    <Note>
+      The default configuration expects PostgreSQL running on `db:5432`. For local development, you may need to update `application.properties` to use `localhost:5432`.
+    </Note>
+  </Step>
+
+  <Step title="Configure Application Properties">
+    Update `src/main/resources/application.properties` if needed:
+    
+    ```properties
+    # PostgreSQL DataSource Configuration
+    spring.datasource.url=jdbc:postgresql://localhost:5432/easy_act
+    spring.datasource.username=postgres
+    spring.datasource.password=postgres_password
+    spring.datasource.driver-class-name=org.postgresql.Driver
+    
+    # JPA Configuration
+    spring.jpa.hibernate.ddl-auto=none
+    spring.jpa.show-sql=true
+    spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
+    
+    # Server Configuration
+    server.port=8080
+    ```
+    
+    <Warning>
+      The `ddl-auto=none` setting means Hibernate will not automatically create tables. You'll need to run database migrations separately.
+    </Warning>
+  </Step>
+
+  <Step title="Run Database Migrations">
+    If the project includes database migration scripts, run them now:
+    
+    ```bash
+    # Example - adjust based on your migration tool
+    mvn flyway:migrate
+    ```
+  </Step>
+
+  <Step title="Start the Application">
+    Run the Spring Boot application:
+    
+    ```bash
+    mvn spring-boot:run
+    ```
+    
+    Or run directly from your IDE by executing the `ApiApplication.java` main method.
+  </Step>
+
+  <Step title="Verify the Setup">
+    Check that the application is running:
+    
+    ```bash
+    curl http://localhost:8080/api/categories
+    ```
+    
+    You should also be able to access the Swagger UI at:
+    
+    ```
+    http://localhost:8080/swagger-ui.html
+    ```
+  </Step>
+</Steps>
+
+## Project Configuration
+
+### Maven Configuration
+
+The project uses the following Maven configuration from `pom.xml`:
+
+```xml
+<parent>
+  <groupId>org.springframework.boot</groupId>
+  <artifactId>spring-boot-starter-parent</artifactId>
+  <version>4.0.1</version>
+</parent>
+
+<groupId>com.raylon</groupId>
+<artifactId>api</artifactId>
+<version>1.0.0</version>
+
+<properties>
+  <java.version>25</java.version>
+</properties>
+```
+
+### Key Dependencies
+
+<CodeGroup>
+```xml Core Dependencies
+<dependency>
+  <groupId>org.springframework.boot</groupId>
+  <artifactId>spring-boot-starter-data-jpa</artifactId>
+</dependency>
+<dependency>
+  <groupId>org.springframework.boot</groupId>
+  <artifactId>spring-boot-starter-webmvc</artifactId>
+</dependency>
+<dependency>
+  <groupId>org.postgresql</groupId>
+  <artifactId>postgresql</artifactId>
+  <scope>runtime</scope>
+</dependency>
+```
+
+```xml Developer Tools
+<dependency>
+  <groupId>org.projectlombok</groupId>
+  <artifactId>lombok</artifactId>
+  <optional>true</optional>
+</dependency>
+<dependency>
+  <groupId>org.springdoc</groupId>
+  <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+  <version>2.6.0</version>
+</dependency>
+```
+
+```xml Testing
+<dependency>
+  <groupId>org.springframework.boot</groupId>
+  <artifactId>spring-boot-starter-data-jpa-test</artifactId>
+  <scope>test</scope>
+</dependency>
+<dependency>
+  <groupId>org.springframework.boot</groupId>
+  <artifactId>spring-boot-starter-webmvc-test</artifactId>
+  <scope>test</scope>
+</dependency>
+```
+</CodeGroup>
+
+## IDE Setup
+
+<Tabs>
+  <Tab title="IntelliJ IDEA">
+    1. Open the project by selecting the `pom.xml` file
+    2. Enable annotation processing for Lombok:
+       - Go to **Settings > Build, Execution, Deployment > Compiler > Annotation Processors**
+       - Check "Enable annotation processing"
+    3. Install the Lombok plugin from the marketplace
+    4. Configure the Java SDK to version 25
+  </Tab>
+  
+  <Tab title="VS Code">
+    1. Install the following extensions:
+       - Extension Pack for Java
+       - Spring Boot Extension Pack
+       - Lombok Annotations Support
+    2. Configure Java 25 in settings
+    3. Open the project folder
+  </Tab>
+  
+  <Tab title="Eclipse">
+    1. Import as Maven project
+    2. Install Lombok:
+       - Download lombok.jar
+       - Run `java -jar lombok.jar` and select your Eclipse installation
+    3. Configure Java 25 in project settings
+  </Tab>
+</Tabs>
+
+## Build and Package
+
+### Development Build
+
+Build the project without running tests:
+
+```bash
+mvn clean package -DskipTests
+```
+
+### Production Build
+
+Build with all tests:
+
+```bash
+mvn clean package
+```
+
+The compiled JAR file will be created at `target/api.jar`.
+
+### Run the JAR
+
+```bash
+java -jar target/api.jar
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Port 8080 already in use">
+    Change the port in `application.properties`:
+    
+    ```properties
+    server.port=8081
+    ```
+    
+    Or set it via command line:
+    
+    ```bash
+    mvn spring-boot:run -Dspring-boot.run.arguments=--server.port=8081
+    ```
+  </Accordion>
+  
+  <Accordion title="Database connection failed">
+    - Verify PostgreSQL is running: `pg_isready -h localhost -p 5432`
+    - Check credentials in `application.properties`
+    - Ensure the `easy_act` database exists
+    - For Docker: Check container status with `docker ps`
+  </Accordion>
+  
+  <Accordion title="Lombok annotations not working">
+    - Ensure Lombok is properly configured in your IDE
+    - Verify annotation processing is enabled
+    - Try rebuilding the project: `mvn clean install`
+  </Accordion>
+  
+  <Accordion title="Maven build fails">
+    - Clear Maven cache: `mvn dependency:purge-local-repository`
+    - Check Java version: `java -version` (should be 25)
+    - Verify internet connection for dependency downloads
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="API Structure" icon="folder-tree" href="./api-structure">
+    Learn about the project structure and layered architecture
+  </Card>
+  <Card title="Database Configuration" icon="database" href="./database">
+    Understand JPA entities and database relationships
+  </Card>
+</CardGroup>
